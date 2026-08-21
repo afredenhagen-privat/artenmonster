@@ -1,0 +1,4 @@
+{
+  "_kommentar": "Handkorrekturen fuer einzelne Tiere. taxid ist die NCBI-Taxon-ID. drop blendet ein Tier aus, tier erzwingt eine Schwierigkeitsstufe, nameDe und nameEn ueberschreiben die automatisch gewaehlten Namen.",
+  "animals": []
+}

@@ -1,0 +1,10 @@
+{
+  "_kommentar": "Taxa, die zwar viele Sitelinks haben, als Rateziel aber nicht taugen. Meist Modellorganismen aus der Forschung.",
+  "taxids": [7227, 6239, 8355, 9606],
+  "_namen": {
+    "7227": "Drosophila melanogaster - Modellorganismus, absurd viele Sitelinks",
+    "6239": "Caenorhabditis elegans - Modellorganismus",
+    "8355": "Xenopus laevis - Modellorganismus",
+    "9606": "Homo sapiens - der Mensch als Rateziel verdirbt das Spiel"
+  }
+}

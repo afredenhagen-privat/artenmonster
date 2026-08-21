@@ -1,0 +1,173 @@
+import type { Tree } from './tree.ts'
+
+/**
+ * Spiellogik. Kennt nur Baumindizes und Zahlen, kein DOM und keine Daten-URLs,
+ * damit sie sich vollstaendig testen laesst.
+ */
+
+export const MAX_GUESSES = 20
+/** Nach so vielen Fehlversuchen darf ein Hinweis abgerufen werden. */
+export const HINT_AFTER = [8, 14] as const
+
+export type GameStatus = 'laeuft' | 'gewonnen' | 'verloren'
+
+export interface GuessResult {
+  /** Index des geratenen Tiers in der Tierliste. */
+  animal: number
+  /** Blattknoten des geratenen Tiers im Baum. */
+  node: number
+  /** Tiefster gemeinsamer Vorfahre von Tipp und Ziel. */
+  lca: number
+  /** Verbleibende Verzweigungen von der gemeinsamen Gruppe bis zum Ziel. */
+  steps: number
+  correct: boolean
+  /** War dieser Tipp der beste bis hierher? */
+  isBest: boolean
+}
+
+export interface GameState {
+  /** Index des Zieltiers in der Tierliste. */
+  target: number
+  targetNode: number
+  guesses: GuessResult[]
+  /** Knoten, die durch Hinweise aufgedeckt wurden. */
+  hints: number[]
+  maxGuesses: number
+  status: GameStatus
+  /** Kein Versuchslimit, Baum frei einsehbar. */
+  zen: boolean
+}
+
+export interface GameOptions {
+  maxGuesses?: number
+  zen?: boolean
+}
+
+export function createGame(target: number, targetNode: number, options: GameOptions = {}): GameState {
+  return {
+    target,
+    targetNode,
+    guesses: [],
+    hints: [],
+    maxGuesses: options.zen ? Infinity : (options.maxGuesses ?? MAX_GUESSES),
+    status: 'laeuft',
+    zen: options.zen ?? false,
+  }
+}
+
+export function alreadyGuessed(state: GameState, animal: number): boolean {
+  return state.guesses.some((g) => g.animal === animal)
+}
+
+/**
+ * Wertet einen Tipp aus. Gibt einen neuen Zustand zurueck, der alte bleibt
+ * unveraendert, damit React den Wechsel sauber mitbekommt.
+ */
+export function applyGuess(state: GameState, tree: Tree, animal: number, node: number): GameState {
+  if (state.status !== 'laeuft') return state
+  if (alreadyGuessed(state, animal)) return state
+
+  const lca = tree.lca(node, state.targetNode)
+  const steps = tree.depthOf(state.targetNode) - tree.depthOf(lca)
+  const correct = node === state.targetNode
+  const bestSoFar = bestSteps(state)
+
+  const result: GuessResult = {
+    animal,
+    node,
+    lca,
+    steps,
+    correct,
+    isBest: steps < bestSoFar,
+  }
+
+  const guesses = [...state.guesses, result]
+  const status: GameStatus = correct
+    ? 'gewonnen'
+    : guesses.length >= state.maxGuesses
+      ? 'verloren'
+      : 'laeuft'
+
+  return { ...state, guesses, status }
+}
+
+/** Wenigste verbleibende Schritte ueber alle bisherigen Tipps. */
+export function bestSteps(state: GameState): number {
+  let best = Infinity
+  for (const g of state.guesses) if (g.steps < best) best = g.steps
+  return best
+}
+
+/**
+ * Der Knoten, den der Spieler bereits sicher kennt: der tiefste bisher
+ * aufgedeckte gemeinsame Vorfahre, aus Tipps und Hinweisen zusammen.
+ * Ohne jeden Tipp ist das die Wurzel.
+ */
+export function knownNode(state: GameState, tree: Tree): number {
+  let best = -1
+  let bestDepth = -1
+  const candidates = [...state.guesses.map((g) => g.lca), ...state.hints]
+  for (const node of candidates) {
+    const d = tree.depthOf(node)
+    if (d > bestDepth) {
+      bestDepth = d
+      best = node
+    }
+  }
+  if (best === -1) {
+    // Noch nichts bekannt: die Wurzel ist der Ausgangspunkt.
+    const path = tree.pathToRoot(state.targetNode)
+    return path[path.length - 1]
+  }
+  return best
+}
+
+/** Wie viele Hinweise stehen nach der bisherigen Zahl an Fehlversuchen zu? */
+export function hintsEarned(state: GameState): number {
+  if (state.zen) return Infinity
+  const wrong = state.guesses.filter((g) => !g.correct).length
+  return HINT_AFTER.filter((n) => wrong >= n).length
+}
+
+export function canTakeHint(state: GameState, tree: Tree): boolean {
+  if (state.status !== 'laeuft') return false
+  if (state.hints.length >= hintsEarned(state)) return false
+  return nextHintNode(state, tree) !== null
+}
+
+/**
+ * Der naechste Hinweis ist genau eine Ebene tiefer als das, was der Spieler
+ * schon weiss. Damit bringt jeder Hinweis einen echten Schritt und deckt nicht
+ * gleich die halbe Loesung auf.
+ */
+export function nextHintNode(state: GameState, tree: Tree): number | null {
+  const known = knownNode(state, tree)
+  const path = tree.pathToRoot(state.targetNode)
+  const idx = path.indexOf(known)
+  if (idx <= 0) return null
+  const next = path[idx - 1]
+  // Das Zielblatt selbst waere die Loesung, das ist kein Hinweis.
+  return next === state.targetNode ? null : next
+}
+
+export function takeHint(state: GameState, tree: Tree): GameState {
+  if (!canTakeHint(state, tree)) return state
+  const node = nextHintNode(state, tree)
+  if (node === null) return state
+  return { ...state, hints: [...state.hints, node] }
+}
+
+/**
+ * Alle Knoten, die im Baum sichtbar sein duerfen: die Pfade der Tipps bis zur
+ * Wurzel plus die aufgedeckten Hinweise. Im Zen-Modus und nach Spielende ist
+ * zusaetzlich der Zielpfad dabei.
+ */
+export function revealedNodes(state: GameState, tree: Tree): Set<number> {
+  const out = new Set<number>()
+  for (const g of state.guesses) for (const n of tree.pathToRoot(g.node)) out.add(n)
+  for (const h of state.hints) for (const n of tree.pathToRoot(h)) out.add(n)
+  if (state.status !== 'laeuft' || state.zen) {
+    for (const n of tree.pathToRoot(state.targetNode)) out.add(n)
+  }
+  return out
+}

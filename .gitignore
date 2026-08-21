@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dev-dist/
+*.local
+.DS_Store
+
+# Rohdaten und HTTP-Cache der Datenpipeline: gross, reproduzierbar, nicht ins Repo
+data/raw/
+data/cache/
+data/work/
