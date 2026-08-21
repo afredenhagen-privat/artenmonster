@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { GameData } from '../data/load.ts'
 import type { GameState } from '../core/game.ts'
-import { alreadyGuessed } from '../core/game.ts'
+import { alreadyGuessed, animalsInGroup, knownNode } from '../core/game.ts'
 import type { Lang } from '../core/types.ts'
 import { t } from '../i18n/strings.ts'
 
@@ -24,15 +24,30 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
   const [text, setText] = useState('')
   const [aktiv, setAktiv] = useState(0)
   const [meldung, setMeldung] = useState<string | null>(null)
+  const [fokus, setFokus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
-  const vorschlaege = useMemo(() => {
-    if (text.trim().length < 1) return []
-    return data.search.search(text, 8)
-  }, [data, text])
+  const animalNodes = useMemo(() => data.animals.map((a) => a.node), [data])
 
-  useEffect(() => setAktiv(0), [text])
+  /**
+   * Bei leerer Eingabe: die Tiere der bereits eingegrenzten Gruppe anbieten,
+   * sofern es wenige genug sind. Sonst die Treffer zur Eingabe.
+   */
+  const gruppe = useMemo(() => {
+    if (text.trim().length > 0) return null
+    const node = knownNode(state, data.tree)
+    if (istWurzel(node, data)) return null
+    const tiere = animalsInGroup(data.tree, animalNodes, node, 30)
+    return tiere && tiere.length > 0 ? { node, tiere } : null
+  }, [data, state, text, animalNodes])
+
+  const vorschlaege = useMemo(() => {
+    if (text.trim().length < 1) return gruppe ? gruppe.tiere.slice(0, 30) : []
+    return data.search.search(text, 8)
+  }, [data, text, gruppe])
+
+  useEffect(() => setAktiv(0), [text, gruppe])
 
   useEffect(() => {
     if (!meldung) return
@@ -84,6 +99,8 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
           disabled={disabled}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={beiTaste}
+          onFocus={() => setFokus(true)}
+          onBlur={() => setTimeout(() => setFokus(false), 150)}
           placeholder={t(lang, 'eingabe')}
           autoComplete="off"
           autoCorrect="off"
@@ -104,7 +121,16 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
 
       {meldung && <p className="mt-2 text-sm text-amber-400">{meldung}</p>}
 
-      {vorschlaege.length > 0 && !disabled && (
+      {gruppe && vorschlaege.length > 0 && (
+        <p className="mt-2 text-xs text-slate-500">
+          {vorschlaege.length}
+          {lang === 'de'
+            ? ' Tiere in ' + data.tree.nameOf(gruppe.node, lang)
+            : ' animals in ' + data.tree.nameOf(gruppe.node, lang)}
+        </p>
+      )}
+
+      {vorschlaege.length > 0 && !disabled && fokus && (
         <ul
           ref={listRef}
           className="absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
@@ -136,4 +162,9 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
       )}
     </div>
   )
+}
+
+/** Die Wurzel als Gruppe anzubieten waere sinnlos, das sind alle Tiere. */
+function istWurzel(node: number, data: GameData): boolean {
+  return data.tree.parentOf(node) === -1
 }

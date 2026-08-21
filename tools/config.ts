@@ -12,10 +12,17 @@ export const CONFIG = {
    */
   MIN_SITELINKS: 12,
 
-  /** Zielgroessen der drei Schwierigkeitsstufen (kumulativ ergibt das den Pool). */
+  /**
+   * Zielgroessen der drei Schwierigkeitsstufen. Zusammen ergeben sie den Pool.
+   *
+   * Die Grenzen stammen aus der Bekanntheitsverteilung: Rang 400 liegt bei etwa
+   * Nutria und Kanadischem Luchs, Rang 1500 bei Klippentaube und Bennettkasuar,
+   * Rang 3000 bei Kragenfaultier. Danach wird es zur Lotterie, deshalb ist dort
+   * Schluss, obwohl rund 12.800 Tiere alle Anforderungen erfuellen wuerden.
+   */
   TIERS: {
-    1: { name: { de: 'Leicht', en: 'Easy' }, size: 300 },
-    2: { name: { de: 'Mittel', en: 'Medium' }, size: 700 },
+    1: { name: { de: 'Leicht', en: 'Easy' }, size: 400 },
+    2: { name: { de: 'Mittel', en: 'Medium' }, size: 1100 },
     3: { name: { de: 'Schwer', en: 'Hard' }, size: 1500 },
   },
 

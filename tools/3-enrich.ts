@@ -41,13 +41,35 @@ interface AnimalOverride {
   tier?: TierId
 }
 
+/** Aus "Wolf (Begriffsklaerung)" wird "Wolf". */
+function ohneKlammerzusatz(name: string | undefined): string {
+  return name ? name.replace(/\s*\([^)]*\)\s*$/, '').trim() : ''
+}
+
+/**
+ * Der Titel des Wikipedia-Artikels ist die mit Abstand beste Namensquelle.
+ *
+ * Wikidatas Trivialnamen (P1843) sind eine ungeordnete Sammlung: fuer Sus scrofa
+ * steht dort unter anderem "Keiler", was aber nur das maennliche Wildschwein
+ * meint, und fuer Canis lupus "Wolfe". Der Artikeltitel dagegen ist genau der
+ * Name, unter dem die Art im Deutschen gefuehrt wird, und er existiert auch
+ * dort, wo Wikidata gar keinen Trivialnamen kennt.
+ *
+ * Reihenfolge: Artikeltitel, dann Trivialname, dann Label. Ein Name, der nur
+ * der wissenschaftliche Name ist, zaehlt nicht als Trivialname.
+ */
 function pickName(c: Candidate, lang: 'de' | 'en'): string {
-  const trivial = lang === 'de' ? c.nameDe : c.nameEn
-  const label = lang === 'de' ? c.labelDe : c.labelEn
-  const name = trivial ?? label ?? ''
-  // Ein Label, das nur der wissenschaftliche Name ist, taugt nicht als Trivialname.
-  if (!name || name === c.sci) return ''
-  return name
+  const kandidaten =
+    lang === 'de'
+      ? [c.titleDe, c.nameDe, c.labelDe]
+      : [c.titleEn, c.nameEn, c.labelEn]
+
+  const sci = (c.sci ?? '').toLowerCase()
+  for (const roh of kandidaten) {
+    const name = ohneKlammerzusatz(roh)
+    if (name && name.toLowerCase() !== sci) return name
+  }
+  return ''
 }
 
 /**

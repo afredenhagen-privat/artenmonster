@@ -158,6 +158,33 @@ export function takeHint(state: GameState, tree: Tree): GameState {
 }
 
 /**
+ * Die Tiere, die unterhalb der bereits bekannten Gruppe liegen.
+ *
+ * Bei einem Pool von mehreren tausend Tieren reicht es nicht, die Gruppe zu
+ * kennen: Wer nicht auf den Namen kommt, kann ihn auch nicht eintippen. Ist die
+ * Gruppe klein genug, wird sie deshalb zur Auswahl angeboten. Das verraet nichts,
+ * was der Spieler nicht ohnehin schon weiss, erspart ihm aber das Erraten der
+ * Schreibweise.
+ *
+ * Gibt null zurueck, wenn die Gruppe groesser als `limit` ist. Die Zaehlung
+ * bricht dann vorzeitig ab, statt tausende Pfade zu Ende zu laufen.
+ */
+export function animalsInGroup(
+  tree: Tree,
+  animalNodes: readonly number[],
+  group: number,
+  limit = 30,
+): number[] | null {
+  const treffer: number[] = []
+  for (let animal = 0; animal < animalNodes.length; animal++) {
+    if (!tree.isAncestorOf(group, animalNodes[animal])) continue
+    treffer.push(animal)
+    if (treffer.length > limit) return null
+  }
+  return treffer
+}
+
+/**
  * Alle Knoten, die im Baum sichtbar sein duerfen: die Pfade der Tipps bis zur
  * Wurzel plus die aufgedeckten Hinweise. Im Zen-Modus und nach Spielende ist
  * zusaetzlich der Zielpfad dabei.

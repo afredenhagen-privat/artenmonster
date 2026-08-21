@@ -5,6 +5,7 @@ import {
   createGame,
   applyGuess,
   alreadyGuessed,
+  animalsInGroup,
   bestSteps,
   knownNode,
   hintsEarned,
@@ -156,5 +157,31 @@ describe('Sichtbarer Baumausschnitt', () => {
   it('zeigt im Zen-Modus den Zielpfad von Anfang an', () => {
     const s = createGame(0, TIERE.loewe, { zen: true })
     expect(revealedNodes(s, tree).has(TIERE.loewe)).toBe(true)
+  })
+})
+
+describe('Tiere einer Gruppe', () => {
+  const tree = beispielbaum()
+  // Reihenfolge der Tierliste: Loewe, Hauskatze, Waldameise, Wolf
+  const animalNodes = [TIERE.loewe, TIERE.katze, TIERE.ameise, TIERE.wolf]
+
+  it('findet die Tiere unterhalb einer Familie', () => {
+    const felidae = 3
+    expect(animalsInGroup(tree, animalNodes, felidae)).toEqual([0, 1])
+  })
+
+  it('zaehlt den Knoten selbst mit, wenn er ein Tier ist', () => {
+    expect(animalsInGroup(tree, animalNodes, TIERE.loewe)).toEqual([0])
+  })
+
+  it('gibt null zurueck, wenn die Gruppe zu gross ist', () => {
+    const wurzel = 0
+    expect(animalsInGroup(tree, animalNodes, wurzel, 30)).toHaveLength(4)
+    expect(animalsInGroup(tree, animalNodes, wurzel, 2)).toBeNull()
+  })
+
+  it('liefert fuer eine leere Gruppe eine leere Liste', () => {
+    const hunde = 4
+    expect(animalsInGroup(tree, [TIERE.loewe, TIERE.katze], hunde)).toEqual([])
   })
 })
