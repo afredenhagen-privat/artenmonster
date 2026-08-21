@@ -60,7 +60,7 @@ function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]
     readOverride<{ animals: AnimalOverride[] }>('animals.json', { animals: [] }).animals.map((o) => [o.taxid, o]),
   )
 
-  const stats = { falscherRang: 0, keinNameDe: 0, keinNameEn: 0, keinBild: 0, doppelt: 0, verworfen: 0 }
+  const stats = { falscherRang: 0, keinNameDe: 0, keinNameEn: 0, keinBild: 0, doppelt: 0, verworfen: 0, ineinander: 0 }
   const byTaxid = new Map<number, PoolAnimal>()
 
   for (const c of candidates) {
@@ -113,48 +113,67 @@ function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]
     })
   }
 
-  let pool = [...byTaxid.values()].sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
+  const nachBekanntheit = [...byTaxid.values()].sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
 
-  // Kein spielbares Tier darf Vorfahre eines anderen sein. Sonst waere ein Tipp
-  // gleichzeitig Loesung und Gruppe, und die Rueckmeldung waere widerspruechlich.
-  const inPool = new Set(pool.map((p) => p.taxid))
-  const konflikte: string[] = []
-  for (const p of pool) {
-    let cur = tree.parent[p.taxid]
+  /*
+   * Kein spielbares Tier darf oberhalb eines anderen liegen. Sonst waere ein
+   * Tipp gleichzeitig Loesung und Gruppe: raet man den Hund, waehrend der Wolf
+   * gesucht ist, waere die gemeinsame Gruppe der Wolf selbst, und die Anzeige
+   * "noch 0 Verzweigungen" bei falschem Tipp ergaebe keinen Sinn.
+   *
+   * Der Fall ist nicht exotisch, sondern der Normalfall bei Haustieren: In der
+   * NCBI-Systematik ist Canis lupus familiaris ein Nachfahre von Canis lupus.
+   * Deshalb wird er automatisch aufgeloest statt den Lauf abzubrechen. Es
+   * gewinnt das bekanntere Tier, das andere faellt aus dem Rateraum, bleibt im
+   * Baum aber als Gruppe erhalten.
+   */
+  const pool: PoolAnimal[] = []
+  const behalten = new Set<number>()
+  const vorfahrenBehaltener = new Set<number>()
+
+  for (const kandidat of nachBekanntheit) {
+    const vorfahren: number[] = []
+    let cur = tree.parent[kandidat.taxid]
     let guard = 0
+    let liegtUnterBehaltenem = false
     while (cur > 1 && guard++ < 200) {
-      if (inPool.has(cur)) {
-        konflikte.push(p.sci + ' (' + p.taxid + ') liegt unterhalb von ' + cur)
+      if (behalten.has(cur)) {
+        liegtUnterBehaltenem = true
         break
       }
+      vorfahren.push(cur)
       const next = tree.parent[cur]
       if (!next || next === cur) break
       cur = next
     }
-  }
-  if (konflikte.length > 0) {
-    throw new Error(
-      'Spielbare Tiere duerfen nicht ineinander liegen. Betroffen:\n  ' + konflikte.slice(0, 20).join('\n  '),
-    )
+
+    if (liegtUnterBehaltenem || vorfahrenBehaltener.has(kandidat.taxid)) {
+      stats.ineinander++
+      continue
+    }
+
+    behalten.add(kandidat.taxid)
+    for (const v of vorfahren) vorfahrenBehaltener.add(v)
+    pool.push(kandidat)
   }
 
   // Stufen schneiden.
   const grenzen = [CONFIG.TIERS[1].size, CONFIG.TIERS[1].size + CONFIG.TIERS[2].size]
   const gesamt = grenzen[1] + CONFIG.TIERS[3].size
-  pool = pool.slice(0, gesamt)
-  pool.forEach((p, i) => {
+  const geschnitten = pool.slice(0, gesamt)
+  geschnitten.forEach((p, i) => {
     const ov = overrides.get(p.taxid)
     p.tier = ov?.tier ?? (i < grenzen[0] ? 1 : i < grenzen[1] ? 2 : 3)
   })
 
   // Sicherheitsnetz gegen einen kaputten Filter weiter oben.
-  for (const p of pool) {
+  for (const p of geschnitten) {
     if (!isDescendantOf(p.taxid, CONFIG.METAZOA_TAXID, tree)) {
       throw new Error(p.sci + ' (' + p.taxid + ') liegt nicht unterhalb von Metazoa.')
     }
   }
 
-  return { pool, stats }
+  return { pool: geschnitten, stats }
 }
 
 async function main(): Promise<void> {
@@ -173,6 +192,7 @@ async function main(): Promise<void> {
   console.log('    ohne englischen Trivialnamen: ' + stats.keinNameEn)
   console.log('    ohne Bild:                    ' + stats.keinBild)
   console.log('    per Override verworfen:       ' + stats.verworfen)
+  console.log('    lag im Baum unter einem bekannteren Tier: ' + stats.ineinander)
   console.log('  Pool: ' + pool.length + ' Tiere')
   for (const t of [1, 2, 3] as TierId[]) {
     console.log('    Stufe ' + t + ' (' + CONFIG.TIERS[t].name.de + '): ' + pool.filter((p) => p.tier === t).length)
