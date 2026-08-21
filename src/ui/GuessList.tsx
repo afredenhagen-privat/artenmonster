@@ -72,6 +72,8 @@ export function GuessList({ data, state, lang }: Props) {
             <div className="mt-2 border-t border-slate-700/60 pt-2 text-sm">
               {g.correct ? (
                 <span className="font-medium text-emerald-300">{t(lang, 'gefunden')}</span>
+              ) : g.insideTarget ? (
+                <span className="font-medium text-amber-300">{t(lang, 'innerhalb')}</span>
               ) : (
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                   <span className="text-[10px] uppercase tracking-wide text-slate-500">

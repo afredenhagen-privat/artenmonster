@@ -78,9 +78,13 @@ async function fetchBatch(files: readonly string[]): Promise<Map<string, Commons
     const file = page.title.replace(/^File:/, '')
     const author = stripHtml(meta.Artist?.value) || stripHtml(meta.Credit?.value) || 'unbekannt'
 
+    // Commons haengt Tracking-Parameter an die Thumbnail-URL. Mit ihnen laedt das
+    // Bild im Browser nicht, ohne sie sofort. Also weg damit.
+    const thumb = info.thumburl.split('?')[0]
+
     out.set(file, {
       file,
-      thumb: info.thumburl.startsWith(THUMB_PREFIX) ? info.thumburl.slice(THUMB_PREFIX.length) : info.thumburl,
+      thumb: thumb.startsWith(THUMB_PREFIX) ? thumb.slice(THUMB_PREFIX.length) : thumb,
       // Manche Urheberangaben sind ganze Absaetze. Fuer eine Bildzeile reicht deutlich weniger.
       author: author.length > 90 ? author.slice(0, 87) + '...' : author,
       license: stripHtml(meta.LicenseShortName?.value) || 'siehe Commons',

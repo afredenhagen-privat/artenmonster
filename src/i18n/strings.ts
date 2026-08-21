@@ -33,6 +33,7 @@ const STRINGS = {
     nochSchritte: 'noch {n} Verzweigungen',
     nochEinSchritt: 'nur noch eine Verzweigung',
     gefunden: 'Gefunden',
+    innerhalb: 'Dein Tipp ist eine Unterart der Lösung.',
     besterTipp: 'bester Tipp',
 
     hinweis: 'Hinweis',
@@ -96,6 +97,7 @@ const STRINGS = {
     nochSchritte: '{n} branches to go',
     nochEinSchritt: 'one branch to go',
     gefunden: 'Found it',
+    innerhalb: 'Your guess is a subspecies of the answer.',
     besterTipp: 'best guess',
 
     hinweis: 'Hint',

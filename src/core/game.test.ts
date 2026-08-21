@@ -185,3 +185,52 @@ describe('Tiere einer Gruppe', () => {
     expect(animalsInGroup(tree, [TIERE.loewe, TIERE.katze], hunde)).toEqual([])
   })
 })
+
+describe('Verschachtelte Tiere', () => {
+  /*
+   * Der Sonderfall Hund und Wolf: In der NCBI-Systematik ist Canis lupus
+   * familiaris eine Unterart von Canis lupus. Beide sind spielbar, weil beide
+   * jeder kennt. Raet man den Hund, waehrend der Wolf gesucht ist, ist die
+   * gemeinsame Gruppe der Wolf selbst.
+   */
+  const tree = new Tree({
+    ranks: ['clade', 'family', 'species', 'subspecies'],
+    nodes: [
+      [1, -1, 0, 'Metazoa', 'Tiere', 'animals'],
+      [2, 0, 1, 'Canidae', 'Hunde', 'dogs'],
+      [3, 1, 2, 'Canis lupus', 'Wolf', 'wolf'],
+      [4, 1, 2, 'Vulpes vulpes', 'Rotfuchs', 'red fox'],
+      [5, 2, 3, 'Canis lupus familiaris', 'Haushund', 'dog'],
+    ],
+  })
+  const WOLF = 2
+  const FUCHS = 3
+  const HUND = 4
+
+  it('meldet den Tipp als Unterart, statt null Verzweigungen anzuzeigen', () => {
+    const s = applyGuess(createGame(0, WOLF), tree, 1, HUND)
+    expect(s.guesses[0].correct).toBe(false)
+    expect(s.guesses[0].insideTarget).toBe(true)
+    expect(s.guesses[0].steps).toBe(0)
+    expect(s.status).toBe('laeuft')
+  })
+
+  it('behandelt die Gegenrichtung ganz normal', () => {
+    // Ziel ist der Hund, geraten wird der Wolf: eine Verzweigung nach unten.
+    const s = applyGuess(createGame(0, HUND), tree, 1, WOLF)
+    expect(s.guesses[0].insideTarget).toBe(false)
+    expect(s.guesses[0].steps).toBe(1)
+  })
+
+  it('setzt insideTarget nicht beim richtigen Tipp', () => {
+    const s = applyGuess(createGame(0, WOLF), tree, 1, WOLF)
+    expect(s.guesses[0].correct).toBe(true)
+    expect(s.guesses[0].insideTarget).toBe(false)
+  })
+
+  it('bleibt bei unverwandten Tieren unauffaellig', () => {
+    const s = applyGuess(createGame(0, WOLF), tree, 1, FUCHS)
+    expect(s.guesses[0].insideTarget).toBe(false)
+    expect(tree.scientificName(s.guesses[0].lca)).toBe('Canidae')
+  })
+})

@@ -1,4 +1,18 @@
 {
-  "_kommentar": "Handkorrekturen fuer einzelne Tiere. taxid ist die NCBI-Taxon-ID. drop blendet ein Tier aus, tier erzwingt eine Schwierigkeitsstufe, nameDe und nameEn ueberschreiben die automatisch gewaehlten Namen.",
-  "animals": []
+  "_kommentar": "Handkorrekturen fuer einzelne Tiere. Felder: taxid (NCBI, Pflicht), qid (nur noetig, wenn das Tier nachgetragen werden muss), nameDe/nameEn (ueberschreiben die automatische Wahl), tier (erzwingt eine Stufe), drop (blendet aus), allowNested (erlaubt, dass dieses Tier ueber oder unter einem anderen spielbaren liegt).",
+
+  "_warum_haustiere": "Haushund, Hauskatze, Hausrind, Hauspferd, Hausschaf und Hausziege haben in Wikidata keine NCBI-Taxon-ID (P685). Ohne die greift der Join der Pipeline nicht, deshalb fallen sie durchs Raster. Es sind aber mit Abstand die bekanntesten Tiere ueberhaupt: der Haushund hat 332 Wikipedia-Sprachversionen, mehr als der Loewe mit 273. Die Zuordnung wird hier von Hand nachgetragen.",
+
+  "_warum_allowNested": "Normalerweise darf kein spielbares Tier ueber einem anderen liegen, sonst waere ein Tipp gleichzeitig Loesung und Gruppe. Diese Regel raeumt sinnvollerweise vier Tiger-Unterarten weg. Bei Haustieren ist die Verschachtelung aber gerade das Interessante: Der Hund ist eine Unterart des Wolfs. Deshalb sind genau diese Paare ausgenommen, und das Spiel meldet den Fall gesondert.",
+
+  "animals": [
+    { "taxid": 9615, "qid": "Q144", "nameDe": "Haushund", "nameEn": "Dog", "allowNested": true, "tier": 1 },
+    { "taxid": 9685, "qid": "Q146", "nameDe": "Hauskatze", "nameEn": "Cat", "allowNested": true, "tier": 1 },
+    { "taxid": 9913, "qid": "Q830", "nameDe": "Hausrind", "nameEn": "Cattle", "allowNested": true, "tier": 1 },
+    { "taxid": 9796, "qid": "Q726", "nameDe": "Hauspferd", "nameEn": "Horse", "allowNested": true, "tier": 1 },
+    { "taxid": 9940, "qid": "Q7368", "nameDe": "Hausschaf", "nameEn": "Sheep", "allowNested": true, "tier": 1 },
+    { "taxid": 9925, "qid": "Q2934", "nameDe": "Hausziege", "nameEn": "Goat", "allowNested": true, "tier": 1 },
+
+    { "taxid": 9825, "allowNested": true, "_hinweis": "Hausschwein. Ohne diese Ausnahme verdraengt es das Wildschwein (Sus scrofa), dessen Unterart es ist." }
+  ]
 }

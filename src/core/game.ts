@@ -21,6 +21,12 @@ export interface GuessResult {
   /** Verbleibende Verzweigungen von der gemeinsamen Gruppe bis zum Ziel. */
   steps: number
   correct: boolean
+  /**
+   * Der Tipp liegt im Baum unterhalb der Loesung, ist also eine Unterart davon.
+   * Praktisch nur bei Haustieren: der Hund unter dem Wolf. Ohne eigene Meldung
+   * stuende hier "noch 0 Verzweigungen" bei falschem Tipp, was niemand versteht.
+   */
+  insideTarget: boolean
   /** War dieser Tipp der beste bis hierher? */
   isBest: boolean
 }
@@ -78,6 +84,7 @@ export function applyGuess(state: GameState, tree: Tree, animal: number, node: n
     lca,
     steps,
     correct,
+    insideTarget: !correct && lca === state.targetNode,
     isBest: steps < bestSoFar,
   }
 

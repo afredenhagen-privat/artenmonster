@@ -79,26 +79,76 @@ export interface Summary {
   url: string
 }
 
-/** Einleitungsabsatz eines Wikipedia-Artikels ueber den REST-Endpunkt. */
-export async function fetchSummary(lang: 'de' | 'en', title: string): Promise<Summary | null> {
-  const url =
-    'https://' + lang + '.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(title.replace(/ /g, '_'))
-  const body = await fetchCached(url)
-  if (!body) return null
-  try {
-    const json = JSON.parse(body) as {
-      extract?: string
-      content_urls?: { desktop?: { page?: string } }
-      type?: string
+/**
+ * Einleitungsabsaetze mehrerer Artikel auf einmal.
+ *
+ * Der REST-Endpunkt /page/summary kann nur einen Artikel je Anfrage. Fuer 3000
+ * Tiere in zwei Sprachen waeren das 6000 Abrufe, und dabei drosselt Wikipedia so
+ * frueh, dass der Durchsatz zusammenbricht. Die Action-API liefert bis zu 20
+ * Einleitungen pro Anfrage, was aus 6000 Abrufen rund 300 macht.
+ */
+const EXTRACT_BATCH = 20
+
+export async function fetchExtracts(
+  lang: 'de' | 'en',
+  titles: readonly string[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<Map<string, Summary>> {
+  const unique = [...new Set(titles.filter(Boolean))]
+  const out = new Map<string, Summary>()
+
+  for (let i = 0; i < unique.length; i += EXTRACT_BATCH) {
+    const batch = unique.slice(i, i + EXTRACT_BATCH)
+    const params = new URLSearchParams({
+      action: 'query',
+      prop: 'extracts',
+      exintro: '1',
+      explaintext: '1',
+      exlimit: String(EXTRACT_BATCH),
+      redirects: '1',
+      titles: batch.join('|'),
+      format: 'json',
+      formatversion: '2',
+    })
+
+    const url = 'https://' + lang + '.wikipedia.org/w/api.php?' + params.toString()
+    if (!isCached(url)) await sleep(200)
+    const body = await fetchCached(url)
+    onProgress?.(Math.min(i + EXTRACT_BATCH, unique.length), unique.length)
+    if (!body) continue
+
+    let json: {
+      query?: {
+        pages?: Array<{ title: string; extract?: string; missing?: boolean }>
+        normalized?: Array<{ from: string; to: string }>
+        redirects?: Array<{ from: string; to: string }>
+      }
     }
-    if (!json.extract || json.type === 'disambiguation') return null
-    return {
-      text: shorten(json.extract, CONFIG.BLURB_MAX_CHARS),
-      url: json.content_urls?.desktop?.page ?? 'https://' + lang + '.wikipedia.org/wiki/' + encodeURIComponent(title),
+    try {
+      json = JSON.parse(body)
+    } catch {
+      continue
     }
-  } catch {
-    return null
+
+    // Die API normalisiert Titel und folgt Weiterleitungen. Damit ein Ergebnis
+    // wieder beim urspruenglich angefragten Titel landet, wird diese Kette
+    // rueckwaerts aufgeloest.
+    const zurueck = new Map<string, string>()
+    for (const schritt of [...(json.query?.normalized ?? []), ...(json.query?.redirects ?? [])]) {
+      zurueck.set(schritt.to, zurueck.get(schritt.from) ?? schritt.from)
+    }
+
+    for (const page of json.query?.pages ?? []) {
+      if (page.missing || !page.extract) continue
+      const angefragt = zurueck.get(page.title) ?? page.title
+      out.set(angefragt, {
+        text: shorten(page.extract, CONFIG.BLURB_MAX_CHARS),
+        url: 'https://' + lang + '.wikipedia.org/wiki/' + encodeURIComponent(page.title.replace(/ /g, '_')),
+      })
+    }
   }
+
+  return out
 }
 
 /** Kuerzt auf volle Saetze, damit der Steckbrief nicht mitten im Wort abbricht. */
