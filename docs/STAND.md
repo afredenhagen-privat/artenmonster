@@ -11,19 +11,19 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | | |
 |---|---|
 | Spielbare Tiere | 4.000 (Leicht 500, Mittel 1.400, Schwer 2.100) |
-| Baumknoten | 5.771 |
+| Baumknoten | 5.773 |
 | Steckbriefe | je 4.000 deutsch und englisch |
-| Gruppenerklärungen | 1.207 deutsch, 1.583 englisch |
+| Gruppenerklärungen | 1.205 deutsch, 1.584 englisch |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 94 |
+| Tests | 99 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
 verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
 Erklärung, Tiere ihren Steckbrief. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
-## Die fünf Entscheidungen, die man kennen muss
+## Die sechs Entscheidungen, die man kennen muss
 
 **Bekanntheit wird an Wikipedia-Abrufen gemessen, nicht an Sprachversionen.** Die Zahl der
 Sprachversionen misst, wie gründlich eine Gruppe erfasst ist, nicht wie bekannt ein Tier ist. Bei
@@ -49,12 +49,21 @@ Haustiere in `tools/overrides/animals.json`, denn dort ist die Verschachtelung g
 Hund ist eine Unterart des Wolfs. Für diesen Fall meldet das Spiel „Dein Tipp ist eine Unterart der
 Lösung" statt eines unverständlichen „noch 0 Verzweigungen".
 
+**In der Suche zählt das Wortende so viel wie der Wortanfang.** Im Deutschen steht das Grundwort
+einer Zusammensetzung hinten: Ein Bergzebra ist ein Zebra, ein Zebrafink ist ein Fink. Solange nur
+der Wortanfang zählte, brachte die Eingabe „Zebra" Zebrabärbling, Zebramanguste und
+Zebra-Harnischwels, aber kein Zebra — die Liste war voll, bevor Grevyzebra und Bergzebra drankamen.
+Beide Stellen zählen deshalb gleich, danach entscheidet die Bekanntheit. Dazu wiegt ein Treffer im
+angezeigten Namen schwerer als einer im englischen oder wissenschaftlichen, sonst steht bei „Zebra"
+auf Deutsch die Wandermuschel oben (englisch *Zebra mussel*). Siehe `matchRang` in
+`src/core/search.ts`.
+
 **Kandidaten kommen über die Taxobox der deutschen Wikipedia, nicht über Wikidata.** Eine
 SPARQL-Abfrage über alle Taxa mit NCBI-ID läuft zuverlässig in den 60-Sekunden-Timeout, egal wie eng
 man filtert. Die Taxobox-Vorlage liefert stattdessen eine begrenzte Liste von rund 62.000 Artikeln
 samt Wikidata-ID; Wikidata wird danach gezielt nach genau diesen Items gefragt.
 
-## Drei Fallen, in die ich getappt bin
+## Vier Fallen, in die ich getappt bin
 
 **Der User-Agent braucht eine erreichbare Adresse.** Ohne sie drosselt die Abrufzahlen-Schnittstelle
 auf 13 Anfragen pro Minute mit 59-Sekunden-Zwangspausen — mit Adresse sind es über 1.500. Aus 19
@@ -68,6 +77,18 @@ Schlüssel ist jetzt die NCBI-Taxon-ID. Ein veralteter Cache liefert damit höch
 statt einem falschen, und beim nächsten Aufruf ist er ohnehin nachgezogen. Alles, was neben dem
 Precache liegt und einen Neubau überdauern kann, braucht einen Schlüssel, der den Neubau ebenfalls
 überdauert.
+
+**Der Join über die NCBI-Taxon-ID verliert bekannte Tiere, und zwar auf zwei Wegen.** Aufgefallen
+ist es, weil die Eingabe „Zebra" kein Zebra brachte: Das Steppenzebra war gar nicht im Spiel. Beim
+Wikidata-Item fehlt die Eigenschaft P685 — derselbe Fall wie beim Haushund. Beim Buntspecht dagegen
+ist sie vorhanden, zeigt aber auf Taxon 137523, das NCBI inzwischen mit 183177 verschmolzen hat.
+Beide Male läuft der Join ins Leere und das Tier existiert für das Spiel nicht.
+
+Betroffen waren unter anderem Pottwal (209.000 Abrufe im Jahr), Buntspecht (161.000) und Habicht
+(102.000) — keine Randfiguren. `npx tsx tools/luecken-check.ts` findet solche Lücken systematisch:
+Ausgangspunkt sind die Taxobox-Artikel der deutschen Wikipedia, wer dort steht und nicht unter den
+Kandidaten, wird über den wissenschaftlichen Namen im lokalen NCBI-Index nachgeschlagen und nach
+Abrufzahlen sortiert. Das Werkzeug gehört nach jedem Datenlauf einmal aufgerufen.
 
 **In SVG überschreibt eine CSS-`transform`-Eigenschaft das `transform`-Attribut.** Die
 Einblend-Animation der Tierknoten hat sie gesetzt, worauf jeder Knoten auf den Nullpunkt zurückfiel
