@@ -97,23 +97,30 @@ async function main(): Promise<void> {
   })
   const searchData = { entries }
 
-  // --- Erklaerungen zu den Gruppen -----------------------------------------
-  // Nach Knotenindex, nicht nach Taxon-ID: Das Spiel arbeitet mit Indizes, und
-  // die Datei wird dadurch deutlich kleiner.
+  /*
+   * Steckbriefe und Gruppenerklaerungen haengen an der Taxon-ID.
+   *
+   * Nicht am Index, obwohl der kuerzer waere. Der Index verschiebt sich bei
+   * jedem Neubau, sobald sich Pool oder Sortierung aendern. Diese beiden
+   * Dateien liegen aber nicht im Precache, sondern im Laufzeit-Cache des
+   * Service Workers und ueberleben dort einen Deploy. Mit Indizes als Schluessel
+   * hiess das: neuer Baum, alte Texte, und zum Manul stand der Steckbrief des
+   * Erdmaennchens. Die Taxon-ID ist stabil, ein veralteter Stand liefert dann
+   * hoechstens keinen Text statt einem falschen.
+   */
   const gruppenDe: Record<string, { text: string; url: string }> = {}
   const gruppenEn: Record<string, { text: string; url: string }> = {}
-  built.nodes.forEach((n, i) => {
-    if (n.blurbDe) gruppenDe[String(i)] = n.blurbDe
-    if (n.blurbEn) gruppenEn[String(i)] = n.blurbEn
+  built.nodes.forEach((n) => {
+    if (n.blurbDe) gruppenDe[String(n.taxid)] = n.blurbDe
+    if (n.blurbEn) gruppenEn[String(n.taxid)] = n.blurbEn
   })
 
-  // --- blurbs --------------------------------------------------------------
   const blurbsDe: Record<string, { text: string; url: string }> = {}
   const blurbsEn: Record<string, { text: string; url: string }> = {}
-  sorted.forEach((p, i) => {
-    if (p.blurbDe) blurbsDe[String(i)] = p.blurbDe
-    if (p.blurbEn) blurbsEn[String(i)] = p.blurbEn
-  })
+  for (const p of sorted) {
+    if (p.blurbDe) blurbsDe[String(p.taxid)] = p.blurbDe
+    if (p.blurbEn) blurbsEn[String(p.taxid)] = p.blurbEn
+  }
 
   // --- Zusicherungen -------------------------------------------------------
   const fehler: string[] = []

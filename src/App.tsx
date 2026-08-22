@@ -10,7 +10,7 @@ import {
 } from './data/storage.ts'
 import { applyGuess, canTakeHint, createGame, takeHint, type BaumModus, type GameState } from './core/game.ts'
 import { dayKey, dailyIndex, puzzleNumber } from './core/daily.ts'
-import type { Lang, TierId } from './core/types.ts'
+import type { BlurbData, Lang, TierId } from './core/types.ts'
 import { t, tierName } from './i18n/strings.ts'
 import { GuessInput } from './ui/GuessInput.tsx'
 import { GuessList } from './ui/GuessList.tsx'
@@ -33,7 +33,7 @@ export function App() {
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
   const [vollbild, setVollbild] = useState(false)
-  const [gruppen, setGruppen] = useState<Record<string, { text: string; url: string }>>({})
+  const [gruppen, setGruppen] = useState<BlurbData>({})
 
   useEffect(() => {
     loadGameData().then(setData, () => setFehler(true))

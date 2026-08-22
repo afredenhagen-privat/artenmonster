@@ -29,6 +29,10 @@ beschreibe('Erzeugte Spieldaten', () => {
   const searchRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'search.json'), 'utf8')) as {
     entries: [string, number][]
   }
+  const lies = (datei: string): Record<string, { text: string; url: string }> =>
+    JSON.parse(fs.readFileSync(path.join(DATA, datei), 'utf8')) as Record<string, { text: string; url: string }>
+  const blurbs = { de: lies('blurbs.de.json'), en: lies('blurbs.en.json') }
+  const gruppenTexte = { de: lies('gruppen.de.json'), en: lies('gruppen.en.json') }
 
   const tree = new Tree(treeRaw)
   const index = new SearchIndex(searchRaw)
@@ -126,6 +130,79 @@ beschreibe('Erzeugte Spieldaten', () => {
         }
       }
       expect(verletzungen).toEqual([])
+    })
+  })
+
+  /*
+   * Steckbriefe hingen frueher am Tierindex. Der verschiebt sich bei jedem
+   * Neubau, und weil die Datei im Laufzeit-Cache des Service Workers einen
+   * Deploy ueberlebt, stand zum Manul der Text des Erdmaennchens. Seitdem ist
+   * die Taxon-ID der Schluessel, und diese Tests halten das fest.
+   */
+  describe('Steckbriefe und Gruppenerklaerungen', () => {
+    /** Nennt der Text den wissenschaftlichen Namen, zumindest die Gattung? */
+    function passtZu(text: string, sci: string): boolean {
+      return text.includes(sci) || text.includes(sci.split(' ')[0])
+    }
+
+    for (const lang of ['de', 'en'] as const) {
+      it('schluesselt die Steckbriefe (' + lang + ') nach Taxon-ID', () => {
+        const taxids = new Set(treeRaw.nodes.map((n) => n[0]))
+        const fremd = Object.keys(blurbs[lang]).filter((k) => !taxids.has(Number(k)))
+        expect(fremd.slice(0, 5)).toEqual([])
+      })
+
+      it('schluesselt die Gruppenerklaerungen (' + lang + ') nach Taxon-ID', () => {
+        const taxids = new Set(treeRaw.nodes.map((n) => n[0]))
+        const fremd = Object.keys(gruppenTexte[lang]).filter((k) => !taxids.has(Number(k)))
+        expect(fremd.slice(0, 5)).toEqual([])
+      })
+    }
+
+    it('legt zu jedem Tier den Text des richtigen Tiers', () => {
+      let geprueft = 0
+      let passend = 0
+      const beispiele: string[] = []
+      for (const a of animals) {
+        const sci = tree.scientificName(a.node)
+        const b = blurbs.de[String(treeRaw.nodes[a.node][0])]
+        if (!b) continue
+        geprueft++
+        if (passtZu(b.text, sci)) passend++
+        else if (beispiele.length < 5) beispiele.push(sci + ': ' + b.text.slice(0, 60))
+      }
+      expect(geprueft).toBeGreaterThan(animals.length * 0.9)
+      // Einzelne Artikel nennen den wissenschaftlichen Namen erst spaeter im
+      // Text. Eine Verschiebung der Schluessel wuerde die Quote reissen lassen.
+      expect(passend / geprueft, 'Beispiele: ' + beispiele.join(' | ')).toBeGreaterThan(0.97)
+    })
+
+    it('legt zu jeder Gruppe den Text der richtigen Gruppe', () => {
+      const byTaxid = new Map(treeRaw.nodes.map((n, i) => [n[0], i]))
+      let geprueft = 0
+      let passend = 0
+      for (const [k, v] of Object.entries(gruppenTexte.de)) {
+        const i = byTaxid.get(Number(k))
+        if (i === undefined) continue
+        geprueft++
+        if (passtZu(v.text, tree.scientificName(i))) passend++
+      }
+      expect(geprueft).toBeGreaterThan(0)
+      expect(passend / geprueft).toBeGreaterThan(0.9)
+    })
+
+    it('nennt namentlich das richtige Tier', () => {
+      const faelle: Array<[string, string]> = [
+        ['Manul', 'Otocolobus manul'],
+        ['Löwe', 'Panthera leo'],
+        ['Erdmännchen', 'Suricata suricatta'],
+      ]
+      for (const [name, sci] of faelle) {
+        const knotenIndex = knoten(name)
+        const b = blurbs.de[String(treeRaw.nodes[knotenIndex][0])]
+        expect(b, 'kein Steckbrief fuer ' + name).toBeDefined()
+        expect(b.text).toContain(sci)
+      }
     })
   })
 

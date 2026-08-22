@@ -39,6 +39,17 @@ export class Tree {
     return this.byTaxid.get(taxid)
   }
 
+  /**
+   * Die NCBI-Taxon-ID eines Knotens.
+   *
+   * Sie ist die einzige Kennung, die einen Neubau der Spieldaten ueberlebt.
+   * Knoten- und Tierindizes verschieben sich, sobald sich Pool oder Sortierung
+   * aendern, deshalb haengen Steckbriefe und Gruppenerklaerungen an der Taxon-ID.
+   */
+  taxidOf(i: number): number {
+    return this.nodes[i][0]
+  }
+
   parentOf(i: number): number {
     return this.nodes[i][1]
   }

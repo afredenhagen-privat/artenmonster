@@ -3,7 +3,8 @@ import { hierarchy, tree as d3tree, type HierarchyPointNode } from 'd3-hierarchy
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { Tree } from '../core/tree.ts'
 import { knownNode, revealedNodes, type BaumModus, type GameState } from '../core/game.ts'
-import type { Lang } from '../core/types.ts'
+import { loadBlurbs } from '../data/load.ts'
+import type { BlurbData, Lang } from '../core/types.ts'
 import { t } from '../i18n/strings.ts'
 import { rangName } from '../i18n/raenge.ts'
 
@@ -37,8 +38,8 @@ interface Props {
   modus: BaumModus
   /** Baumknoten der Spieltiere, damit Blätter anders gezeichnet werden. */
   animalOfNode: Map<number, number>
-  /** Einleitungsabsätze zu den Gruppen, nach Knotenindex. */
-  gruppen: Record<string, { text: string; url: string }>
+  /** Einleitungsabsätze zu den Gruppen, nach NCBI-Taxon-ID. */
+  gruppen: BlurbData
 }
 
 /*
@@ -117,6 +118,26 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
   const rahmen = useRef<HTMLDivElement | null>(null)
   const [gewaehlt, setGewaehlt] = useState<number | null>(null)
 
+  /*
+   * Die Steckbriefe der Tiere kommen erst, wenn zum ersten Mal ein Tier
+   * angetippt wird. Sie sind die groesste der Datendateien und werden fuer das
+   * Spielen selbst nicht gebraucht; sie beim Start mitzuladen wuerde jede Runde
+   * teurer machen, damit ein Tippen guenstiger wird.
+   */
+  const [steckbriefe, setSteckbriefe] = useState<BlurbData | null>(null)
+  const [willSteckbriefe, setWillSteckbriefe] = useState(false)
+
+  useEffect(() => {
+    if (!willSteckbriefe) return
+    let abgebrochen = false
+    loadBlurbs(lang).then((b) => {
+      if (!abgebrochen) setSteckbriefe(b)
+    })
+    return () => {
+      abgebrochen = true
+    }
+  }, [willSteckbriefe, lang])
+
   const layout = useMemo(() => {
     const sichtbar = revealedNodes(state, tree, modus)
     // Solange gespielt wird, steht statt der Lösung ein Platzhalter im Baum.
@@ -176,7 +197,15 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
 
   const proTipp = new Map(state.guesses.map((g) => [g.node, g]))
   const hinweise = new Set(state.hints)
-  const erklaerung = gewaehlt !== null ? gruppen[String(gewaehlt)] : undefined
+
+  // Tiere und Gruppen fuehren zu verschiedenen Dateien, beide nach Taxon-ID.
+  const gewaehltIstTier = gewaehlt !== null && animalOfNode.has(gewaehlt)
+  const erklaerung =
+    gewaehlt === null
+      ? undefined
+      : gewaehltIstTier
+        ? steckbriefe?.[String(tree.taxidOf(gewaehlt))]
+        : gruppen[String(tree.taxidOf(gewaehlt))]
 
   return (
     <div ref={rahmen} className="relative h-full w-full overflow-hidden">
@@ -234,9 +263,12 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
                     schritte={tipp?.steps}
                     istZiel={index === state.targetNode && state.status !== 'laeuft'}
                     istHinweis={hinweise.has(index)}
-                    erklaerbar={!istTier && Boolean(gruppen[String(index)])}
+                    erklaerbar={istTier || Boolean(gruppen[String(tree.taxidOf(index))])}
                     gewaehlt={gewaehlt === index}
-                    beiKlick={() => setGewaehlt((v) => (v === index ? null : index))}
+                    beiKlick={() => {
+                      if (istTier) setWillSteckbriefe(true)
+                      setGewaehlt((v) => (v === index ? null : index))
+                    }}
                   />
                 )
               })}
@@ -253,7 +285,7 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
         {t(lang, 'zuruecksetzen')}
       </button>
 
-      {erklaerung && gewaehlt !== null && (
+      {gewaehlt !== null && (erklaerung || gewaehltIstTier) && (
         <aside className="animate-aufblenden absolute inset-x-0 bottom-0 border-t border-linie bg-kabinett/97 p-4 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -276,16 +308,24 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
               ×
             </button>
           </div>
-          <p className="mt-2 max-h-28 overflow-y-auto font-tafel text-[13px] leading-relaxed text-knochen/85">
-            {erklaerung.text}
-          </p>
-          <p className="mt-2 font-etikett text-[10px] text-flechte/70">
-            <a href={erklaerung.url} target="_blank" rel="noreferrer" className="hover:text-knochen">
-              {t(lang, 'mehrErfahren')}
-            </a>
-            {' · '}
-            {t(lang, 'steckbriefQuelle')}
-          </p>
+          {erklaerung ? (
+            <>
+              <p className="mt-2 max-h-28 overflow-y-auto font-tafel text-[13px] leading-relaxed text-knochen/85">
+                {erklaerung.text}
+              </p>
+              <p className="mt-2 font-etikett text-[10px] text-flechte/70">
+                <a href={erklaerung.url} target="_blank" rel="noreferrer" className="hover:text-knochen">
+                  {t(lang, 'mehrErfahren')}
+                </a>
+                {' · '}
+                {t(lang, 'steckbriefQuelle')}
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 font-tafel text-[13px] italic leading-relaxed text-flechte">
+              {steckbriefe === null ? t(lang, 'steckbriefLaedt') : t(lang, 'keinSteckbrief')}
+            </p>
+          )}
         </aside>
       )}
     </div>
@@ -443,13 +483,21 @@ function Marke({
   const hoehe = 36
   const rahmen = istZiel
     ? 'fill-zinnober stroke-zinnober'
-    : schritte !== undefined
-      ? 'fill-kabinett ' + waerme(schritte).strich
-      : 'fill-kabinett stroke-ast'
+    : gewaehlt
+      ? 'fill-kabinett stroke-nah'
+      : schritte !== undefined
+        ? 'fill-kabinett ' + waerme(schritte).strich
+        : 'fill-kabinett stroke-ast'
 
+  // Tiere sind genauso antippbar wie Gruppen, nur steht dahinter der Steckbrief
+  // der Art statt der Erklaerung zur Gruppe.
   return (
-    <g transform={`translate(${x - breite / 2}, ${y - hoehe / 2 + 4})`} className="animate-einblenden">
-      <rect width={breite} height={hoehe} className={rahmen} strokeWidth={1} />
+    <g
+      transform={`translate(${x - breite / 2}, ${y - hoehe / 2 + 4})`}
+      onClick={erklaerbar ? beiKlick : undefined}
+      className={'animate-einblenden' + (erklaerbar ? ' cursor-pointer' : '')}
+    >
+      <rect width={breite} height={hoehe} className={rahmen} strokeWidth={gewaehlt ? 2 : 1} />
       <text
         x={breite / 2}
         y={15}

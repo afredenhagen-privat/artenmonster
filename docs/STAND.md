@@ -13,14 +13,15 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | Spielbare Tiere | 4.000 (Leicht 500, Mittel 1.400, Schwer 2.100) |
 | Baumknoten | 5.771 |
 | Steckbriefe | je 4.000 deutsch und englisch |
-| Gruppenerklärungen | 831 deutsch, 990 englisch |
+| Gruppenerklärungen | 1.207 deutsch, 1.583 englisch |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 87 |
+| Tests | 94 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
-verdichtet oder vollständig. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
+verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
+Erklärung, Tiere ihren Steckbrief. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
 ## Die fünf Entscheidungen, die man kennen muss
 
@@ -53,11 +54,20 @@ SPARQL-Abfrage über alle Taxa mit NCBI-ID läuft zuverlässig in den 60-Sekunde
 man filtert. Die Taxobox-Vorlage liefert stattdessen eine begrenzte Liste von rund 62.000 Artikeln
 samt Wikidata-ID; Wikidata wird danach gezielt nach genau diesen Items gefragt.
 
-## Zwei Fallen, in die ich getappt bin
+## Drei Fallen, in die ich getappt bin
 
 **Der User-Agent braucht eine erreichbare Adresse.** Ohne sie drosselt die Abrufzahlen-Schnittstelle
 auf 13 Anfragen pro Minute mit 59-Sekunden-Zwangspausen — mit Adresse sind es über 1.500. Aus 19
 Stunden wurden 50 Minuten. Es lag nicht an der Nebenläufigkeit, die war unschuldig.
+
+**Steckbriefe dürfen nicht am Index hängen.** Sie taten es, und nach der Umstellung auf Abrufzahlen
+verschob sich die Sortierung des Pools: Position 141 war vorher das Erdmännchen und danach der
+Manul. Weil `blurbs.*.json` und `gruppen.*.json` nicht im Precache liegen, sondern im Laufzeit-Cache
+des Service Workers, überlebten sie den Deploy — und zum Manul stand der Text des Erdmännchens.
+Schlüssel ist jetzt die NCBI-Taxon-ID. Ein veralteter Cache liefert damit höchstens keinen Text
+statt einem falschen, und beim nächsten Aufruf ist er ohnehin nachgezogen. Alles, was neben dem
+Precache liegt und einen Neubau überdauern kann, braucht einen Schlüssel, der den Neubau ebenfalls
+überdauert.
 
 **In SVG überschreibt eine CSS-`transform`-Eigenschaft das `transform`-Attribut.** Die
 Einblend-Animation der Tierknoten hat sie gesetzt, worauf jeder Knoten auf den Nullpunkt zurückfiel

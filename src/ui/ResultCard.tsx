@@ -28,17 +28,18 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
 
   const animal = data.animalOfNode.get(state.targetNode)
   const eintrag = animal !== undefined ? data.animals[animal] : undefined
+  const taxid = data.tree.taxidOf(state.targetNode)
 
   useEffect(() => {
     let abgebrochen = false
-    if (animal === undefined) return
+    setBlurb(null)
     loadBlurbs(lang).then((alle) => {
-      if (!abgebrochen) setBlurb(alle[String(animal)] ?? null)
+      if (!abgebrochen) setBlurb(alle[String(taxid)] ?? null)
     })
     return () => {
       abgebrochen = true
     }
-  }, [animal, lang])
+  }, [taxid, lang])
 
   useEffect(() => setBildKaputt(false), [state.targetNode])
 

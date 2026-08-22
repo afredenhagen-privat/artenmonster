@@ -69,7 +69,13 @@ export interface Blurb {
   url: string
 }
 
-/** Steckbriefe, nach Tierindex. Wird erst nach geloestem Raetsel geladen. */
+/**
+ * Steckbriefe und Gruppenerklaerungen, nach NCBI-Taxon-ID.
+ *
+ * Bewusst nicht nach Index: Diese Dateien liegen im Laufzeit-Cache des Service
+ * Workers und ueberleben dort einen Deploy. Indizes verschieben sich beim
+ * Neubau der Daten, die Taxon-ID nicht.
+ */
 export type BlurbData = Record<string, Blurb>
 
 export interface MetaData {
