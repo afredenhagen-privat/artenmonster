@@ -66,9 +66,16 @@ export const CONFIG = {
   /** Breite der Bild-Thumbnails von Wikimedia Commons. */
   IMAGE_WIDTH: 400,
 
-  /** Hoeflichkeit gegenueber den Wikimedia-Servern. */
+  /*
+   * Hoeflichkeit gegenueber den Wikimedia-Servern.
+   *
+   * Der User-Agent muss eine erreichbare Adresse nennen, das verlangen die
+   * Wikimedia-Richtlinien ausdruecklich. Ohne sie drosselt die Abrufzahlen-
+   * Schnittstelle brutal: 13 Anfragen je Minute mit 59-Sekunden-Zwangspausen,
+   * gegenueber ueber 1500 je Minute mit Adresse. Es war nicht die Nebenlaeufigkeit.
+   */
   HTTP: {
-    userAgent: 'artenmonster-datapipeline/0.1 (privates Lernspiel; Kontakt via GitHub)',
+    userAgent: 'artenmonster/0.1 (https://github.com/afredenhagen-privat/artenmonster)',
     concurrency: 6,
     retries: 6,
   },

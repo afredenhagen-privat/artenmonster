@@ -1,95 +1,116 @@
 # Stand am 22.08.2026
 
-Kurzfassung: Das Spiel ist veröffentlicht und läuft unter
-**https://afredenhagen-privat.github.io/artenmonster/**. Was noch aussteht, steht unten.
+Das Spiel läuft unter **https://afredenhagen-privat.github.io/artenmonster/** und wird bei jedem
+Push auf `main` neu gebaut und veröffentlicht.
 
-## Was fertig ist
+Diese Datei ist der Einstieg für jeden, der ohne Vorgeschichte weiterarbeiten will: was da ist, was
+offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 
-Die Datenpipeline ist einmal vollständig durchgelaufen. Ergebnis in `public/data/`:
+## Was da ist
 
 | | |
 |---|---|
-| Spielbare Tiere | 3.000 (Stufe 1: 400, Stufe 2: 1.100, Stufe 3: 1.500) |
-| Baumknoten | 4.089 |
-| Steckbriefe | 3.000 deutsch, 3.000 englisch |
-| Bilder | 3.000, alle mit Lizenzangabe |
-| Precache (offline spielbar) | 362 KB gepackt |
-| Alle Daten zusammen | 956 KB gepackt |
+| Spielbare Tiere | 4.000 (Leicht 500, Mittel 1.400, Schwer 2.100) |
+| Baumknoten | 5.771 |
+| Steckbriefe | je 4.000 deutsch und englisch |
+| Gruppenerklärungen | 831 deutsch, 990 englisch |
+| Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
+| Offline-Paket | 506 KB gepackt |
+| Tests | 87 |
 
-Das Spiel selbst: Tagesrätsel, Endlos- und Zen-Modus, drei Stufen, Deutsch und Englisch
-umschaltbar, Autovervollständigung über deutsche, englische und wissenschaftliche Namen,
-Baumansicht mit Pan und Zoom, Hinweise nach 8 und 14 Fehlversuchen, Ergebnisschirm mit Bild,
-Steckbrief und vollständiger Systematik, Teilen als Emoji-Block.
+Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
+Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
+verdichtet oder vollständig. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
-78 Tests laufen grün, darunter Stichproben gegen die echten Daten (Löwe/Tiger treffen sich in
-Panthera, Löwe/Wolf in Carnivora, Löwe/Kolkrabe in Amniota, Löwe/Honigbiene in Bilateria).
+## Die fünf Entscheidungen, die man kennen muss
 
-Beim Durchspielen des Tagesrätsels: Löwe → Amnioten (11 Verzweigungen), Kolkrabe → Telluraves (4),
-Waldkauz → Eigentliche Eulen (2), Waldohreule → Ohreulen (1), dann die Sumpfohreule. Die
-Eingrenzung stimmte in jedem Schritt mit dem berechneten Pfad überein.
+**Bekanntheit wird an Wikipedia-Abrufen gemessen, nicht an Sprachversionen.** Die Zahl der
+Sprachversionen misst, wie gründlich eine Gruppe erfasst ist, nicht wie bekannt ein Tier ist. Bei
+Vögeln ist sie systematisch aufgebläht, weil Vogelkunde ein weltweit gepflegtes Hobby ist. Folge
+war, dass Lachseeschwalbe (2.350 Abrufe im Jahr) und Rotschenkel (12.837) in der Stufe „Leicht"
+standen, während die Gartenkreuzspinne mit 77.039 Abrufen in „Schwer" saß. Seit der Umstellung
+stimmt die Reihenfolge. Siehe `tools/pageviews.ts`.
 
-## Was noch geprüft werden muss
+**Jede Großgruppe hat eine Quote.** Ohne sie besteht das Spiel zur Hälfte aus Vögeln. Die Ziele
+stehen in `tools/config.ts` unter `GRUPPEN`; jede Gruppe wird nach eigener Reihenfolge gefüllt, der
+Rest global.
 
-**Auf dem Handy zum Startbildschirm hinzufügen** und dort eine Runde spielen. Die Baumansicht mit
-Wischen und Zoomen ist das Stück, das am wenigsten geprüft ist.
+**Im Englischen darf der lateinische Name einspringen, im Deutschen nicht.** Die deutsche Wikipedia
+bildet für Insekten Trivialnamen, die englische führt sie unter Latein. *Lasius flavus* heißt auf
+Deutsch Gelbe Wiesenameise und auf Englisch eben *Lasius flavus*. Das als fehlenden Namen zu werten
+hat 2.327 Insekten aussortiert, darunter 699 Käfer und 39 Ameisen — bei Vögeln nur vier. Umgekehrt
+bliebe die deutsche Regel nicht bestehen: Ein Spiel, in dem man *Carabus auronitens* eintippen muss,
+macht keinen Spaß.
 
-**Echter Flugmodus-Test.** Auf der veröffentlichten Seite registriert sich der Service Worker und
-legt 14 Einträge in den Precache: App-Hülle, Icons, Manifest sowie `tree.json`, `animals.json`,
-`search.json` und `meta.json`. Die Steckbriefe sind wie geplant nicht dabei, sie kommen erst nach
-gelöstem Rätsel. Damit ist alles vorhanden, was das Spiel offline braucht. Nachgewiesen ist das
-bisher über den Cache-Inhalt, nicht durch ein tatsächlich abgeschaltetes Netz — dafür einmal die
-Seite laden, dann Flugmodus, dann neu laden.
+**Kein spielbares Tier darf über einem anderen liegen** — sonst wäre ein Tipp gleichzeitig Lösung
+und Gruppe. Die Regel räumt sinnvoll vier Tiger-Unterarten und den Grizzly weg. Ausgenommen sind die
+Haustiere in `tools/overrides/animals.json`, denn dort ist die Verschachtelung gerade der Reiz: Der
+Hund ist eine Unterart des Wolfs. Für diesen Fall meldet das Spiel „Dein Tipp ist eine Unterart der
+Lösung" statt eines unverständlichen „noch 0 Verzweigungen".
 
-Nebenbei: In der eingebetteten Vorschau von Claude Code lässt sich kein Service Worker
-registrieren, deshalb war der Nachweis lokal nicht möglich. Auf der echten HTTPS-Domain
-funktioniert es.
+**Kandidaten kommen über die Taxobox der deutschen Wikipedia, nicht über Wikidata.** Eine
+SPARQL-Abfrage über alle Taxa mit NCBI-ID läuft zuverlässig in den 60-Sekunden-Timeout, egal wie eng
+man filtert. Die Taxobox-Vorlage liefert stattdessen eine begrenzte Liste von rund 62.000 Artikeln
+samt Wikidata-ID; Wikidata wird danach gezielt nach genau diesen Items gefragt.
 
-## Offene Punkte
+## Zwei Fallen, in die ich getappt bin
 
-**Kladen ohne deutschen Namen.** 429 von 4.089 Knoten haben keinen deutschen Namen und zeigen
-Latein. Das sind fast nur Gattungen wie *Larus*, *Vulpes* oder *Ardea*, wo das völlig in Ordnung
-ist. Wenn du einzelne davon eindeutschen willst, listet Schritt 4 am Ende die häufigsten auf, und
-`tools/overrides/clades.json` nimmt sie auf.
+**Der User-Agent braucht eine erreichbare Adresse.** Ohne sie drosselt die Abrufzahlen-Schnittstelle
+auf 13 Anfragen pro Minute mit 59-Sekunden-Zwangspausen — mit Adresse sind es über 1.500. Aus 19
+Stunden wurden 50 Minuten. Es lag nicht an der Nebenläufigkeit, die war unschuldig.
 
-**Bildurheber.** Bei 113 von 3.000 Bildern (4 %) fehlt in den Commons-Metadaten der Urheber, dort
-steht "unbekannt". Die Bildzeile verlinkt in jedem Fall auf die Commons-Seite mit den vollen
-Angaben, das reicht als Nachweis. Sauberer wäre, für diese Fälle ein anderes Bild zu nehmen.
+**In SVG überschreibt eine CSS-`transform`-Eigenschaft das `transform`-Attribut.** Die
+Einblend-Animation der Tierknoten hat sie gesetzt, worauf jeder Knoten auf den Nullpunkt zurückfiel
+und alle Tiere übereinander lagen. Für SVG gibt es deshalb eine eigene Animation, die nur die
+Deckkraft anfasst (`animate-einblenden`).
 
-**Eigene Adresse.** Die Seite läuft unter der github.io-Adresse. Eine eigene Domain wäre über
-`gh api repos/.../pages` mit `cname` nachrüstbar.
+## Was offen ist
+
+**Abrufzahlen nur auf Deutsch.** Die Schwierigkeitsstufen sind an deutschen Lesegewohnheiten
+geeicht. Für die englische Fassung wären englische Abrufzahlen richtiger; das wäre ein zweiter Lauf
+derselben Größenordnung über `en.wikipedia`.
+
+**Kladen ohne deutschen Namen.** Rund 900 von 5.771 Knoten zeigen Latein. Das sind fast nur
+Gattungen wie *Larus* oder *Vulpes*, wo das in Ordnung ist. Schritt 4 listet am Ende die häufigsten
+auf, `tools/overrides/clades.json` nimmt Übersetzungen auf.
+
+**Bildurheber.** Bei etwa 4 % der Bilder fehlt in den Commons-Metadaten der Urheber, dort steht
+„unbekannt". Die Bildzeile verlinkt in jedem Fall auf die Commons-Seite mit den vollen Angaben.
 
 **Statistik.** `src/data/storage.ts` schreibt Serie, Trefferquote und Versuchsverteilung mit, aber
-es gibt noch keinen Schirm, der das anzeigt.
+es gibt keinen Schirm dafür.
 
-## Zwei Entscheidungen, die man kennen sollte
-
-**Warum der Umweg über die Wikipedia-Taxobox.** Der naheliegende Weg wäre eine SPARQL-Abfrage über
-alle Taxa mit NCBI-ID. Der funktioniert nicht: Das sind 1,5 Mio. Einträge, und der Wikidata Query
-Service bricht nach 60 Sekunden ab, egal wie eng man filtert. Die Taxobox-Vorlage der deutschen
-Wikipedia liefert stattdessen eine begrenzte Liste von 61.842 Artikeln samt Wikidata-ID. Wikidata
-wird danach gezielt nach genau diesen Items gefragt.
-
-**Warum Hund und Wolf beide spielbar sind.** Normalerweise darf kein spielbares Tier über einem
-anderen liegen, sonst wäre ein Tipp gleichzeitig Lösung und Gruppe. Diese Regel räumt sinnvoll vier
-Tiger-Unterarten und den Grizzly weg. Bei Haustieren ist die Verschachtelung aber gerade das
-Interessante, denn der Hund ist in der NCBI-Systematik eine Unterart des Wolfs. Diese Paare sind
-über `allowNested` ausgenommen, und das Spiel meldet den Fall gesondert ("Dein Tipp ist eine
-Unterart der Lösung"), statt ein unverständliches "noch 0 Verzweigungen" anzuzeigen.
-
-Nebenbei: Haushund, Hauskatze, Hausrind, Hauspferd, Hausschaf und Hausziege fehlten zunächst
-komplett, weil ihre Wikidata-Einträge keine NCBI-Taxon-ID haben. Ausgerechnet die bekanntesten
-Tiere überhaupt, der Haushund hat 332 Wikipedia-Sprachversionen gegenüber 273 beim Löwen. Sie sind
-jetzt in `tools/overrides/animals.json` von Hand zugeordnet.
+**Keine Tests für die Oberfläche.** Die 87 Tests decken Spiellogik und Daten ab, nicht das Verhalten
+der Komponenten. Ein Fehler wie die verschwindende Vorschlagsliste (ein Timer, der nach dem
+Zurückkehren des Fokus zuschlug) wäre nur mit einer Testbibliothek für React-Komponenten zu fangen.
 
 ## Daten neu bauen
-
-Nur nötig, wenn der Pool wachsen soll oder die Quellen aktualisiert werden.
 
 ```bash
 npm run data:all
 ```
 
-Der erste Durchlauf dauerte etwa eine Stunde, fast nur Wartezeit auf Wikimedia. Alle Antworten
-liegen unter `data/cache/`, ein zweiter Durchlauf ist deshalb eine Sache von Minuten. Die
-Poolgröße ist eine Zahl in `tools/config.ts`, keine Codeänderung; 12.840 Arten erfüllen alle
-Anforderungen, gespielt werden davon 3.000.
+Der erste vollständige Durchlauf dauert ein bis zwei Stunden, fast nur Wartezeit auf Wikimedia. Alle
+Antworten liegen unter `data/cache/`, ein zweiter Durchlauf ist deshalb eine Sache von Minuten. Zum
+Nachmessen:
+
+```bash
+npm run data:gruppen
+```
+
+```bash
+npm run data:stufen
+```
+
+Die Poolgröße ist eine Zahl in `tools/config.ts`, keine Codeänderung: `TIERS[n].size` bestimmt die
+Stufen, `GRUPPEN[n].ziel` die Verteilung. Verfügbar wären rund 14.700 Arten, gespielt werden 4.000.
+
+## Was noch geprüft werden sollte
+
+**Auf dem Handy zum Startbildschirm hinzufügen** und eine Runde spielen. Die Baumansicht mit Wischen
+und Zoomen ist das am wenigsten geprüfte Stück.
+
+**Flugmodus.** Auf der veröffentlichten Seite registriert sich der Service Worker und legt die
+Kerndateien in den Precache; die Steckbriefe und Gruppenerklärungen kommen erst bei Bedarf. Der
+Cache-Inhalt ist geprüft, ein tatsächlich abgeschaltetes Netz nicht. Einmal laden, dann Flugmodus,
+dann neu laden.

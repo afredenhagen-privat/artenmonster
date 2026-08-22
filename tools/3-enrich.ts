@@ -14,6 +14,7 @@ import { PATHS, ensureDirs, readJson, writeJson, readOverride } from './paths.ts
 import { progress } from './http.ts'
 import { fetchExtracts } from './wikipedia.ts'
 import { fetchImageInfo, type CommonsInfo } from './commons.ts'
+import { fetchPageviews, schaetzerAusSitelinks } from './pageviews.ts'
 import { loadTree, isDescendantOf, rankOf, type TaxTree } from './ncbi.ts'
 import { sparql, val, qid } from './sparql.ts'
 import type { Candidate } from './2-fetch-wikidata.ts'
@@ -24,7 +25,12 @@ export interface PoolAnimal {
   sci: string
   nameDe: string
   nameEn: string
+  /** Bekanntheit, gemessen an den Wikipedia-Abrufen des letzten Jahres. */
   score: number
+  /** Zahl der Wikipedia-Sprachversionen. Nur noch zur Einordnung, nicht zur Wertung. */
+  sitelinks: number
+  /** true, wenn der Wert aus den Sprachversionen geschaetzt wurde. */
+  geschaetzt?: boolean
   tier: TierId
   titleDe: string
   titleEn?: string
@@ -196,7 +202,11 @@ function waehleMitQuote(
  * Rang Art oder Unterart, deutscher und englischer Trivialname, Bild vorhanden.
  * Bei doppelter Taxon-ID gewinnt der bekanntere Eintrag.
  */
-function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]; stats: Record<string, number> } {
+async function buildPool(
+  candidates: Candidate[],
+  tree: TaxTree,
+  bewerten: (kandidaten: PoolAnimal[]) => Promise<void>,
+): Promise<{ pool: PoolAnimal[]; stats: Record<string, number> }> {
   const overrides = new Map<number, AnimalOverride>(
     readOverride<{ animals: AnimalOverride[] }>('animals.json', { animals: [] }).animals.map((o) => [o.taxid, o]),
   )
@@ -247,7 +257,8 @@ function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]
       sci: c.sci ?? '',
       nameDe,
       nameEn,
-      score: c.sitelinks,
+      score: 0,
+      sitelinks: c.sitelinks,
       tier: 3,
       titleDe: c.titleDe,
       titleEn: c.titleEn,
@@ -255,7 +266,12 @@ function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]
     })
   }
 
+  // Erst jetzt steht fest, welche Tiere ueberhaupt in Frage kommen. Die
+  // Abrufzahlen werden deshalb an dieser Stelle nachgereicht, nicht frueher.
+  await bewerten([...byTaxid.values()])
+
   const nachBekanntheit = [...byTaxid.values()].sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
+
 
   /*
    * Kein spielbares Tier darf oberhalb eines anderen liegen. Sonst waere ein
@@ -345,7 +361,40 @@ async function main(): Promise<void> {
   }
 
   const tree = await loadTree()
-  const { pool, stats } = buildPool([...nachtraege, ...candidates], tree)
+  const { pool, stats } = await buildPool([...nachtraege, ...candidates], tree, async (kandidaten) => {
+    /*
+     * Bekanntheit wird an den Wikipedia-Abrufen des letzten Jahres gemessen,
+     * nicht mehr an der Zahl der Sprachversionen. Die zaehlt, wie gruendlich
+     * eine Gruppe erfasst ist, und ist bei Voegeln systematisch aufgeblaeht:
+     * So landeten Lachseeschwalbe (2350 Abrufe) und Rotschenkel (12837) in der
+     * Stufe "Leicht", waehrend der Loewe auf 212410 kommt.
+     */
+    console.log('  Abrufzahlen fuer ' + kandidaten.length + ' Tiere holen (das dauert beim ersten Mal) ...')
+    const aufrufe = await fetchPageviews(
+      kandidaten.map((k) => k.titleDe),
+      progress('Abrufzahlen'),
+    )
+
+    const mitBeidem = kandidaten
+      .map((k) => ({ sitelinks: k.sitelinks, aufrufe: aufrufe.get(k.titleDe)?.gesamt ?? 0 }))
+      .filter((x) => x.aufrufe > 0)
+    const schaetzen = schaetzerAusSitelinks(mitBeidem)
+
+    let ohneDaten = 0
+    for (const k of kandidaten) {
+      const a = aufrufe.get(k.titleDe)
+      if (a && a.gesamt > 0) {
+        k.score = a.gesamt
+      } else {
+        k.score = schaetzen(k.sitelinks)
+        k.geschaetzt = true
+        ohneDaten++
+      }
+    }
+    console.log(
+      '  ' + (kandidaten.length - ohneDaten) + ' mit echten Abrufzahlen, ' + ohneDaten + ' aus Sprachversionen geschaetzt',
+    )
+  })
 
   console.log('  Aussortiert:')
   console.log('    Rang weder Art noch Unterart: ' + stats.falscherRang)
