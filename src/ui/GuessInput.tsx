@@ -45,10 +45,15 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
     return tiere && tiere.length > 0 ? { node, tiere } : null
   }, [data, state, text, animalNodes])
 
+  /*
+   * Zwoelf statt acht Vorschlaege: Bei einem Wort wie "Zebra", das in vielen
+   * zusammengesetzten Namen steckt, war die Liste vorher voll, bevor das
+   * gemeinte Tier ueberhaupt drankam. Die Liste scrollt ohnehin.
+   */
   const vorschlaege = useMemo(() => {
     if (text.trim().length < 1) return gruppe ? gruppe.tiere.slice(0, 30) : []
-    return data.search.search(text, 8)
-  }, [data, text, gruppe])
+    return data.search.search(text, 12, (animal) => data.tree.nameOf(data.animals[animal].node, lang))
+  }, [data, text, gruppe, lang])
 
   useEffect(() => setAktiv(0), [text, gruppe])
 

@@ -59,6 +59,70 @@ describe('Suchindex', () => {
     expect(index.search('cat')[0]).toBe(1)
   })
 
+  it('stellt das Grundwort am Wortende dem Wortanfang gleich', () => {
+    /*
+     * Im Deutschen steht das Grundwort hinten: Ein Bergzebra ist ein Zebra, ein
+     * Zebrafink ist ein Fink. Wer "Zebra" eingibt, will beide sehen, und danach
+     * soll die Bekanntheit entscheiden — nicht die Frage, an welcher Stelle des
+     * Wortes der Begriff steht.
+     */
+    const tiere = new SearchIndex({
+      entries: [
+        ['zebrafink', 5],
+        ['bergzebra', 9],
+        ['zebramanguste', 12],
+      ],
+    })
+    const treffer = tiere.search('zebra')
+    expect(treffer).toContain(9)
+    // Alle drei auf derselben Stufe, also nach Bekanntheit sortiert.
+    expect(treffer).toEqual([5, 9, 12])
+  })
+
+  it('nimmt das Wortende erst ab drei Zeichen', () => {
+    /*
+     * Sonst zaehlt jede Endsilbe als Volltreffer: "ra" wuerde "Bergzebra" auf
+     * dieselbe Stufe heben wie "Rabe" und wegen der hoeheren Bekanntheit sogar
+     * davorziehen.
+     */
+    const tiere = new SearchIndex({ entries: [['bergzebra', 0], ['rabe', 1]] })
+    expect(tiere.search('ra')[0]).toBe(1)
+  })
+
+  it('stellt einen Treffer im angezeigten Namen vor einen im Nebennamen', () => {
+    /*
+     * Die Wandermuschel heisst auf Englisch "Zebra mussel". Wer auf Deutsch
+     * spielt und "Zebra" eingibt, sieht in der Liste "Wandermuschel" — ein Name
+     * ohne jeden Bezug zur Eingabe. Solche Treffer gehoeren nach hinten.
+     */
+    const namen: Record<number, string> = { 0: 'Wandermuschel', 1: 'Bergzebra' }
+    const tiere = new SearchIndex({
+      entries: [
+        ['wandermuschel', 0],
+        ['zebra mussel', 0],
+        ['bergzebra', 1],
+      ],
+    })
+    expect(tiere.search('zebra', 12, (a) => namen[a])).toEqual([1, 0])
+    // Ohne den angezeigten Namen bleibt es bei der reinen Trefferguete.
+    expect(tiere.search('zebra')).toEqual([0, 1])
+  })
+
+  it('findet den Loewen in jeder Schreibweise zuerst', () => {
+    const namen: Record<number, string> = { 0: 'Löwe', 1: 'Höhlenlöwe' }
+    const tiere = new SearchIndex({
+      entries: [
+        ['lowe', 0],
+        ['loewe', 0],
+        ['hohlenlowe', 1],
+        ['hoehlenloewe', 1],
+      ],
+    })
+    for (const eingabe of ['Löwe', 'loewe', 'lowe']) {
+      expect(tiere.search(eingabe, 12, (a) => namen[a])[0], eingabe).toBe(0)
+    }
+  })
+
   it('gibt bei leerer Eingabe nichts zurueck', () => {
     expect(index.search('')).toEqual([])
     expect(index.search('   ')).toEqual([])

@@ -51,6 +51,31 @@ export interface SearchHit {
   rank: number
 }
 
+/** Zahl der Guetestufen. Ein Treffer im Nebennamen wird um diesen Wert schlechter. */
+const STUFEN = 4
+
+/**
+ * Wie gut passt ein Suchbegriff auf einen Namen? Kleiner ist besser, null heisst
+ * kein Treffer.
+ *
+ * Praefix und Wortende zaehlen gleich viel, und das ist der Kern der Sache:
+ * Im Deutschen steht das Grundwort einer Zusammensetzung hinten. Ein Bergzebra
+ * ist ein Zebra, ein Zebrafink ist ein Fink. Wer "Zebra" eingibt, meint mit
+ * grosser Wahrscheinlichkeit die Tiere hinten. Beide auf dieselbe Stufe zu
+ * stellen und danach die Bekanntheit entscheiden zu lassen bringt die Zebras
+ * nach oben, ohne die Zebrafinken zu verstecken.
+ *
+ * Das Wortende zaehlt erst ab drei Zeichen, sonst wird jede Endsilbe zum Treffer.
+ */
+export function matchRang(term: string, q: string): number | null {
+  if (term === q) return 0
+  if (term.startsWith(q)) return 1
+  if (q.length >= 3 && term.endsWith(q)) return 1
+  if (term.includes(' ' + q)) return 2
+  if (term.includes(q)) return 3
+  return null
+}
+
 export class SearchIndex {
   private readonly entries: readonly SearchEntry[]
 
@@ -60,28 +85,40 @@ export class SearchIndex {
   }
 
   /**
-   * Sucht Tiere zur Eingabe. Praefixtreffer schlagen Wortanfangstreffer, die
-   * wiederum Teilstringtreffer schlagen. Bei ein paar tausend Eintraegen ist der
-   * lineare Durchlauf schnell genug und spart eine Indexstruktur.
+   * Sucht Tiere zur Eingabe. Bei ein paar tausend Eintraegen ist der lineare
+   * Durchlauf schnell genug und spart eine Indexstruktur.
+   *
+   * `anzeigeName` ist der Name, den die Oberflaeche gerade zeigt. Wird er
+   * mitgegeben, schlaegt ein Treffer darin jeden Treffer in einem Nebennamen.
+   * Ohne das steht bei der Eingabe "Zebra" auf Deutsch die Wandermuschel weit
+   * oben, weil sie auf Englisch Zebra mussel heisst — ein Tier, dessen
+   * angezeigter Name das Wort gar nicht enthaelt.
    */
-  search(query: string, limit = 12): number[] {
+  search(query: string, limit = 12, anzeigeName?: (animal: number) => string): number[] {
     const q = normalize(query)
     if (!q) return []
 
     const best = new Map<number, number>()
     for (const [term, animal] of this.entries) {
-      let rank: number
-      if (term === q) rank = 0
-      else if (term.startsWith(q)) rank = 1
-      else if (term.includes(' ' + q)) rank = 2
-      else if (term.includes(q)) rank = 3
-      else continue
-
+      const rank = matchRang(term, q)
+      if (rank === null) continue
       const prev = best.get(animal)
       if (prev === undefined || rank < prev) best.set(animal, rank)
     }
 
-    return [...best.entries()]
+    const bewertet = [...best.entries()].map(([animal, rank]) => {
+      if (!anzeigeName) return [animal, rank] as const
+      // Der angezeigte Name wird genauso normalisiert wie der Index, damit
+      // "loewe" und "lowe" gleich behandelt werden.
+      let imNamen: number | null = null
+      for (const variante of indexVariants(anzeigeName(animal))) {
+        const r = matchRang(variante, q)
+        if (r !== null && (imNamen === null || r < imNamen)) imNamen = r
+      }
+      return [animal, imNamen ?? rank + STUFEN] as const
+    })
+
+    return bewertet
       .sort((a, b) => a[1] - b[1] || a[0] - b[0])
       .slice(0, limit)
       .map(([animal]) => animal)
