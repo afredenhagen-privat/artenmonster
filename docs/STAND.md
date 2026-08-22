@@ -1,7 +1,7 @@
 # Stand am 22.08.2026
 
-Kurzfassung: Das Spiel läuft, ist einmal komplett durchgespielt, und die Daten stehen im Repo.
-Was noch aussteht, steht unten und ist alles überschaubar.
+Kurzfassung: Das Spiel ist veröffentlicht und läuft unter
+**https://afredenhagen-privat.github.io/artenmonster/**. Was noch aussteht, steht unten.
 
 ## Was fertig ist
 
@@ -30,25 +30,19 @@ Eingrenzung stimmte in jedem Schritt mit dem berechneten Pfad überein.
 
 ## Was noch geprüft werden muss
 
-**Der Offline-Test steht aus.** Im eingebetteten Vorschaufenster lässt sich kein Service Worker
-registrieren — `/sw.js` wird ausgeliefert, der Kontext ist sicher, die Registrierung scheitert
-trotzdem mit einem generischen Fetch-Fehler. Das ist eine Einschränkung der Testumgebung, keine
-der App. Statisch geprüft ist: Das Precache-Manifest enthält genau die richtigen 17 Einträge
-(Baum, Tierliste, Suchindex, App-Hülle, Icons) und ausdrücklich **nicht** die Steckbriefe.
-
-So testest du es im echten Browser:
-
-```bash
-npm run build && npm run preview
-```
-
-Dann `http://localhost:4173` öffnen, kurz warten, bis der Service Worker installiert ist
-(DevTools → Application → Service Workers), den Preview-Server abschalten und die Seite neu laden.
-Das Spiel muss vollständig funktionieren, inklusive Tagesrätsel. Nur die Tierbilder fehlen, das
-ist so gewollt.
-
 **Auf dem Handy zum Startbildschirm hinzufügen** und dort eine Runde spielen. Die Baumansicht mit
-Wischen und Zoomen ist das Stück, das ich am wenigsten prüfen konnte.
+Wischen und Zoomen ist das Stück, das am wenigsten geprüft ist.
+
+**Echter Flugmodus-Test.** Auf der veröffentlichten Seite registriert sich der Service Worker und
+legt 14 Einträge in den Precache: App-Hülle, Icons, Manifest sowie `tree.json`, `animals.json`,
+`search.json` und `meta.json`. Die Steckbriefe sind wie geplant nicht dabei, sie kommen erst nach
+gelöstem Rätsel. Damit ist alles vorhanden, was das Spiel offline braucht. Nachgewiesen ist das
+bisher über den Cache-Inhalt, nicht durch ein tatsächlich abgeschaltetes Netz — dafür einmal die
+Seite laden, dann Flugmodus, dann neu laden.
+
+Nebenbei: In der eingebetteten Vorschau von Claude Code lässt sich kein Service Worker
+registrieren, deshalb war der Nachweis lokal nicht möglich. Auf der echten HTTPS-Domain
+funktioniert es.
 
 ## Offene Punkte
 
@@ -61,9 +55,8 @@ ist. Wenn du einzelne davon eindeutschen willst, listet Schritt 4 am Ende die h�
 steht "unbekannt". Die Bildzeile verlinkt in jedem Fall auf die Commons-Seite mit den vollen
 Angaben, das reicht als Nachweis. Sauberer wäre, für diese Fälle ein anderes Bild zu nehmen.
 
-**Deployment.** Noch nichts eingerichtet. `DEPLOY_TARGET=gh-pages npm run build` setzt die
-Basis-URL auf `/artenmonster/`, das ist alles, was für GitHub Pages vorbereitet ist. Es fehlen
-Repository, Workflow und die erste Veröffentlichung.
+**Eigene Adresse.** Die Seite läuft unter der github.io-Adresse. Eine eigene Domain wäre über
+`gh api repos/.../pages` mit `cname` nachrüstbar.
 
 **Statistik.** `src/data/storage.ts` schreibt Serie, Trefferquote und Versuchsverteilung mit, aber
 es gibt noch keinen Schirm, der das anzeigt.

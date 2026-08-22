@@ -1,5 +1,7 @@
 # Artenmonster
 
+**Spielen: https://afredenhagen-privat.github.io/artenmonster/**
+
 Ein Ratespiel im Stil von [Metazooa](https://metazooa.com/): Du rätst Tiere, und das Spiel verrät
 bei jedem Fehlversuch, in welcher gemeinsamen Gruppe des Stammbaums dein Tipp und die Lösung liegen.
 Aus "Ameise und Tarantel sind beide Gliederfüßer" wird über mehrere Versuche eine Eingrenzung bis zur
@@ -22,6 +24,16 @@ eingeschlossen: Das Datum ist der Zufallsseed, den rechnet das Gerät selbst aus
 
 Nur die Tierfotos kommen live von Wikimedia. Der Service Worker legt jedes einmal geladene Bild
 dauerhaft ab, sodass Tiere aus vergangenen Runden ihr Foto auch ohne Netz behalten.
+
+## Veröffentlichen
+
+Jeder Push auf `main` baut und veröffentlicht automatisch
+([.github/workflows/deploy.yml](.github/workflows/deploy.yml)). Der Workflow lässt vorher die
+Tests laufen, und die pruefen auch die erzeugten Spieldaten. Ein kaputter Datenstand kommt damit
+gar nicht erst online.
+
+`DEPLOY_TARGET=gh-pages` setzt die Basis-URL auf `/artenmonster/`, weil GitHub Pages unter dem
+Repository-Namen ausliefert. Manifest, Service-Worker-Scope und Precache-Pfade ziehen mit.
 
 ## Loslegen
 
