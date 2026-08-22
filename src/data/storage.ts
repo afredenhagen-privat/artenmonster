@@ -1,3 +1,4 @@
+import type { BaumModus } from '../core/game.ts'
 import type { Lang, TierId } from '../core/types.ts'
 
 /**
@@ -12,6 +13,8 @@ const PREFIX = 'artenmonster:'
 export interface Einstellungen {
   lang: Lang
   tier: TierId
+  /** Wie viel vom Stammbaum gezeigt wird. */
+  baumModus: BaumModus
 }
 
 export interface TagesErgebnis {
@@ -55,6 +58,7 @@ export function ladeEinstellungen(): Einstellungen {
   return {
     lang: gespeichert.lang ?? browserSprache,
     tier: gespeichert.tier ?? 1,
+    baumModus: gespeichert.baumModus ?? 'gruppe',
   }
 }
 

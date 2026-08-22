@@ -192,14 +192,43 @@ export function animalsInGroup(
 }
 
 /**
- * Alle Knoten, die im Baum sichtbar sein duerfen: die Pfade der Tipps bis zur
- * Wurzel plus die aufgedeckten Hinweise. Im Zen-Modus und nach Spielende ist
- * zusaetzlich der Zielpfad dabei.
+ * Wie viel vom Stammbaum gezeigt wird.
+ *
+ * `gruppe` zeigt nur, was tatsaechlich erspielt wurde: die gemeinsamen Gruppen
+ * der Tipps, die aufgedeckten Hinweise und die geratenen Tiere. Alle
+ * Zwischenebenen faellt die Darstellung zusammen. Damit liest der Baum die
+ * Geschichte der Eingrenzung, statt die vollstaendige Systematik zu buchstabieren.
+ *
+ * `voll` zeigt jede Abstammungsebene jedes Tipps. Mehr Systematik zum Nachlesen,
+ * aber auch deutlich mehr Rauschen.
  */
-export function revealedNodes(state: GameState, tree: Tree): Set<number> {
+export type BaumModus = 'gruppe' | 'voll'
+
+/**
+ * Alle Knoten, die im Baum sichtbar sein duerfen. Im Zen-Modus und nach
+ * Spielende ist zusaetzlich der Zielpfad dabei.
+ */
+export function revealedNodes(state: GameState, tree: Tree, modus: BaumModus = 'gruppe'): Set<number> {
   const out = new Set<number>()
-  for (const g of state.guesses) for (const n of tree.pathToRoot(g.node)) out.add(n)
-  for (const h of state.hints) for (const n of tree.pathToRoot(h)) out.add(n)
+
+  // Die Wurzel ist immer da, damit der Baum einen Ansatzpunkt hat.
+  const wurzel = tree.pathToRoot(state.targetNode).at(-1)
+  if (wurzel !== undefined) out.add(wurzel)
+
+  for (const g of state.guesses) {
+    if (modus === 'voll') {
+      for (const n of tree.pathToRoot(g.node)) out.add(n)
+    } else {
+      out.add(g.lca)
+      out.add(g.node)
+    }
+  }
+
+  for (const h of state.hints) {
+    if (modus === 'voll') for (const n of tree.pathToRoot(h)) out.add(n)
+    else out.add(h)
+  }
+
   if (state.status !== 'laeuft' || state.zen) {
     for (const n of tree.pathToRoot(state.targetNode)) out.add(n)
   }

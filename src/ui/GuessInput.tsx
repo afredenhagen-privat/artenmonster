@@ -107,33 +107,32 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
           autoCapitalize="off"
           spellCheck={false}
           aria-label={t(lang, 'eingabe')}
-          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder-slate-500 outline-none focus:border-teal-500 disabled:opacity-50"
+          className="w-full border border-linie bg-kabinett px-4 py-3 font-tafel text-[15px] text-knochen placeholder-flechte/60 outline-none transition focus:border-nah disabled:opacity-50"
         />
         <button
           type="button"
           disabled={disabled || vorschlaege.length === 0}
           onClick={() => absenden(vorschlaege[aktiv])}
-          className="shrink-0 rounded-xl bg-teal-600 px-5 py-3 font-medium text-white transition hover:bg-teal-500 disabled:opacity-40"
+          className="shrink-0 border border-nah bg-nah/15 px-5 py-3 font-etikett text-[11px] uppercase tracking-etikett text-nah transition hover:bg-nah hover:text-tinte disabled:opacity-30 disabled:hover:bg-nah/15 disabled:hover:text-nah"
         >
           {t(lang, 'raten')}
         </button>
       </div>
 
-      {meldung && <p className="mt-2 text-sm text-amber-400">{meldung}</p>}
+      {meldung && <p className="mt-2 text-[13px] text-mittel">{meldung}</p>}
 
       {gruppe && vorschlaege.length > 0 && (
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="etikett mt-2">
           {vorschlaege.length}
-          {lang === 'de'
-            ? ' Tiere in ' + data.tree.nameOf(gruppe.node, lang)
-            : ' animals in ' + data.tree.nameOf(gruppe.node, lang)}
+          {lang === 'de' ? ' Tiere in ' : ' animals in '}
+          {data.tree.nameOf(gruppe.node, lang)}
         </p>
       )}
 
       {vorschlaege.length > 0 && !disabled && fokus && (
         <ul
           ref={listRef}
-          className="absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+          className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto border border-linie bg-kabinett shadow-2xl shadow-tinte"
         >
           {vorschlaege.map((animal, i) => {
             const node = data.animals[animal].node
@@ -145,13 +144,13 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
                   onMouseEnter={() => setAktiv(i)}
                   onClick={() => absenden(animal)}
                   className={
-                    'flex w-full items-baseline justify-between gap-3 px-4 py-2.5 text-left transition ' +
-                    (i === aktiv ? 'bg-slate-800' : '') +
-                    (schonGeraten ? ' opacity-40' : '')
+                    'flex w-full items-baseline justify-between gap-3 border-l-2 px-4 py-2 text-left transition ' +
+                    (i === aktiv ? 'border-l-nah bg-fach' : 'border-l-transparent') +
+                    (schonGeraten ? ' opacity-35' : '')
                   }
                 >
-                  <span className="text-slate-100">{data.tree.nameOf(node, lang)}</span>
-                  <span className="shrink-0 text-xs italic text-slate-500">
+                  <span className="font-tafel text-[14px] text-knochen">{data.tree.nameOf(node, lang)}</span>
+                  <span className="binomen shrink-0 text-[11px] text-flechte">
                     {data.tree.scientificName(node)}
                   </span>
                 </button>

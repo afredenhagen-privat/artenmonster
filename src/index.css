@@ -8,9 +8,7 @@
   }
 
   body {
-    @apply bg-slate-950 text-slate-200 antialiased;
-    font-family:
-      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    @apply bg-tinte font-sans text-knochen antialiased;
     /* Beim Wischen im Baum soll nicht die Seite mitrutschen. */
     overscroll-behavior: none;
   }
@@ -20,5 +18,32 @@
     body {
       padding-bottom: env(safe-area-inset-bottom);
     }
+  }
+
+  /* Sichtbarer Fokus ueberall, ohne den Standardrahmen zu erben. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-nah ring-offset-2 ring-offset-tinte;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Etikettenfeld: der kleine Rang ueber einem Namen, wie auf einem Praeparat. */
+  .etikett {
+    @apply font-etikett text-[10px] uppercase tracking-etikett text-flechte;
+  }
+
+  /* Wissenschaftlicher Name. Immer kursiv, das ist die Konvention. */
+  .binomen {
+    @apply font-tafel italic;
   }
 }

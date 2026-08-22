@@ -25,6 +25,7 @@ const STRINGS = {
     eingabe: 'Tier eingeben ...',
     raten: 'Raten',
     versuche: 'Versuch {n} von {max}',
+    verbleibend: '{n} übrig',
     versucheZen: 'Versuch {n}',
     schonGeraten: 'Das hattest du schon.',
     nichtGefunden: 'Kein Tier mit diesem Namen im Spiel.',
@@ -55,8 +56,11 @@ const STRINGS = {
     steckbriefQuelle: 'Text aus Wikipedia, CC BY-SA 4.0',
 
     baum: 'Stammbaum',
-    baumLeer: 'Rate ein Tier, dann wächst hier der Baum.',
+    baumLeer: 'Rate ein Tier. Der Baum wächst mit jedem Versuch.',
     zuruecksetzen: 'Ansicht zurücksetzen',
+    baumGruppe: 'Bis zur Gruppe',
+    baumVoll: 'Vollständig',
+    baumModusHilfe: 'Bis zur Gruppe zeigt von jedem Tipp nur den Weg bis zur gemeinsamen Gruppe. Vollständig zeigt jede Ebene.',
 
     laedt: 'Lade Stammbaum ...',
     ladefehler: 'Die Spieldaten ließen sich nicht laden.',
@@ -89,6 +93,7 @@ const STRINGS = {
     eingabe: 'Enter an animal ...',
     raten: 'Guess',
     versuche: 'Guess {n} of {max}',
+    verbleibend: '{n} left',
     versucheZen: 'Guess {n}',
     schonGeraten: 'You already tried that one.',
     nichtGefunden: 'No animal by that name in the game.',
@@ -119,8 +124,11 @@ const STRINGS = {
     steckbriefQuelle: 'Text from Wikipedia, CC BY-SA 4.0',
 
     baum: 'Tree of life',
-    baumLeer: 'Make a guess and the tree grows here.',
+    baumLeer: 'Make a guess. The tree grows with every try.',
     zuruecksetzen: 'Reset view',
+    baumGruppe: 'To the group',
+    baumVoll: 'Every level',
+    baumModusHilfe: 'To the group shows each guess only as far as the shared group. Every level shows the full lineage.',
 
     laedt: 'Loading the tree ...',
     ladefehler: 'Could not load the game data.',

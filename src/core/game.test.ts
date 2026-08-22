@@ -141,22 +141,69 @@ describe('Hinweise', () => {
 describe('Sichtbarer Baumausschnitt', () => {
   const tree = beispielbaum()
 
-  it('zeigt waehrend des Spiels nur die Pfade der Tipps', () => {
-    const s = applyGuess(createGame(0, TIERE.loewe), tree, 1, TIERE.ameise)
-    const sichtbar = revealedNodes(s, tree)
-    // Ameise, Insecta, Metazoa
-    expect([...sichtbar].sort((a, b) => a - b)).toEqual([0, 2, 7])
+  it('zeigt im Gruppenmodus nur Wurzel, gemeinsame Gruppe und Tipp', () => {
+    // Ziel Loewe, geraten Hauskatze: gemeinsam ist Felidae (Index 3).
+    const s = applyGuess(createGame(0, TIERE.loewe), tree, 1, TIERE.katze)
+    const sichtbar = revealedNodes(s, tree, 'gruppe')
+    // Metazoa als Wurzel, Felidae als gemeinsame Gruppe, die Katze als Tipp.
+    // Vertebrata dazwischen faellt weg, es wurde nicht erspielt.
+    expect([...sichtbar].sort((a, b) => a - b)).toEqual([0, 3, TIERE.katze])
     expect(sichtbar.has(TIERE.loewe)).toBe(false)
+    expect(sichtbar.has(1)).toBe(false)
+  })
+
+  it('laesst im Gruppenmodus die eigene Verwandtschaft des Tipps weg', () => {
+    // Ziel Loewe, geraten Wolf: gemeinsam ist erst Vertebrata. Canidae gehoert
+    // zur Verwandtschaft des Wolfs und sagt ueber den Loewen nichts aus.
+    const s = applyGuess(createGame(0, TIERE.loewe), tree, 1, TIERE.wolf)
+    const sichtbar = revealedNodes(s, tree, 'gruppe')
+    const canidae = 4
+    expect(sichtbar.has(canidae)).toBe(false)
+    expect(sichtbar.has(TIERE.wolf)).toBe(true)
+  })
+
+  it('sammelt im Gruppenmodus die Gruppen mehrerer Tipps', () => {
+    let s = createGame(0, TIERE.loewe)
+    s = applyGuess(s, tree, 1, TIERE.ameise) // gemeinsam Metazoa
+    s = applyGuess(s, tree, 2, TIERE.wolf) // gemeinsam Vertebrata
+    s = applyGuess(s, tree, 3, TIERE.katze) // gemeinsam Felidae
+    const sichtbar = revealedNodes(s, tree, 'gruppe')
+    // Die drei Gruppen als Kette der Eingrenzung, plus die drei Tipps.
+    expect(sichtbar.has(0)).toBe(true)
+    expect(sichtbar.has(1)).toBe(true)
+    expect(sichtbar.has(3)).toBe(true)
+    expect(sichtbar.size).toBe(6)
+  })
+
+  it('zeigt im vollen Modus jede Ebene des Tipps', () => {
+    const s = applyGuess(createGame(0, TIERE.loewe), tree, 1, TIERE.wolf)
+    const sichtbar = revealedNodes(s, tree, 'voll')
+    const canidae = 4
+    expect(sichtbar.has(canidae)).toBe(true)
   })
 
   it('deckt nach Spielende den Zielpfad mit auf', () => {
     const s = applyGuess(createGame(0, TIERE.loewe), tree, 0, TIERE.loewe)
-    expect(revealedNodes(s, tree).has(TIERE.loewe)).toBe(true)
+    expect(revealedNodes(s, tree, 'gruppe').has(TIERE.loewe)).toBe(true)
   })
 
   it('zeigt im Zen-Modus den Zielpfad von Anfang an', () => {
     const s = createGame(0, TIERE.loewe, { zen: true })
-    expect(revealedNodes(s, tree).has(TIERE.loewe)).toBe(true)
+    expect(revealedNodes(s, tree, 'gruppe').has(TIERE.loewe)).toBe(true)
+  })
+
+  it('zeigt auch ohne jeden Tipp die Wurzel', () => {
+    const s = createGame(0, TIERE.loewe)
+    expect(revealedNodes(s, tree, 'gruppe')).toEqual(new Set([0]))
+  })
+
+  it('nimmt Hinweise in beiden Modi auf', () => {
+    let s = createGame(0, TIERE.loewe)
+    for (let i = 1; i <= 8; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    s = takeHint(s, tree)
+    for (const modus of ['gruppe', 'voll'] as const) {
+      expect(revealedNodes(s, tree, modus).has(s.hints[0])).toBe(true)
+    }
   })
 })
 

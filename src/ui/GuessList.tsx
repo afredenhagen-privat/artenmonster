@@ -2,11 +2,13 @@ import type { GameData } from '../data/load.ts'
 import type { GameState } from '../core/game.ts'
 import type { Lang } from '../core/types.ts'
 import { t } from '../i18n/strings.ts'
-import { feldFuer } from '../core/share.ts'
 
 /**
- * Liste der bisherigen Tipps, neuester zuerst.
- * Jede Zeile nennt die gemeinsame Gruppe und wie weit es von dort noch ist.
+ * Die bisherigen Tipps als Bestimmungsprotokoll, neuester zuerst.
+ *
+ * Jede Zeile trägt links eine Kante in der Wärmefarbe: Sie zeigt auf einen Blick,
+ * wie nah der Tipp war, ohne dass man die Zahl lesen muss. Die Zahl steht
+ * trotzdem daneben, im Etikettensatz.
  */
 
 interface Props {
@@ -15,89 +17,94 @@ interface Props {
   lang: Lang
 }
 
+/** Kalt heißt viele Verzweigungen bis zur Lösung, warm heißt fast dran. */
+function waerme(steps: number): { kante: string; text: string } {
+  if (steps <= 1) return { kante: 'border-l-nah', text: 'text-nah' }
+  if (steps === 2) return { kante: 'border-l-mittel', text: 'text-mittel' }
+  if (steps === 3) return { kante: 'border-l-weit', text: 'text-weit' }
+  return { kante: 'border-l-fern', text: 'text-fern' }
+}
+
 export function GuessList({ data, state, lang }: Props) {
   if (state.guesses.length === 0 && state.hints.length === 0) return null
 
-  const bester = state.guesses.reduce<number>(
+  const besterIndex = state.guesses.reduce(
     (best, g, i) => (g.steps < state.guesses[best].steps ? i : best),
     0,
   )
 
   return (
-    <div className="space-y-2">
+    <ol className="space-y-px">
       {state.hints.map((node, i) => (
-        <div
+        <li
           key={'hinweis' + i}
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+          className="animate-aufblenden border-l-2 border-l-mittel bg-mittel/10 px-4 py-2.5"
         >
-          <span className="mr-2 font-medium uppercase tracking-wide text-amber-400/80 text-[10px]">
-            {t(lang, 'hinweis')}
-          </span>
-          {t(lang, 'hinweisAufgedeckt', { gruppe: data.tree.nameOf(node, lang) })}
-        </div>
+          <p className="etikett text-mittel">{t(lang, 'hinweis')}</p>
+          <p className="mt-0.5 text-sm text-knochen">
+            {t(lang, 'hinweisAufgedeckt', { gruppe: data.tree.nameOf(node, lang) })}
+          </p>
+        </li>
       ))}
 
       {[...state.guesses].reverse().map((g, i) => {
         const echterIndex = state.guesses.length - 1 - i
-        const istBester = echterIndex === bester && !g.correct
+        const istBester = echterIndex === besterIndex && !g.correct
+        const skala = waerme(g.steps)
+        const tierKnoten = data.animals[g.animal].node
         const gruppe = data.tree.nameOf(g.lca, lang)
         const gruppeLatein = data.tree.hasCommonName(g.lca, lang) ? data.tree.scientificName(g.lca) : null
 
         return (
-          <div
+          <li
             key={g.animal}
             className={
-              'rounded-xl border px-4 py-3 transition ' +
+              'animate-aufblenden border-l-2 px-4 py-2.5 transition ' +
               (g.correct
-                ? 'border-emerald-500/60 bg-emerald-500/10'
-                : istBester
-                  ? 'border-teal-500/50 bg-slate-800/80'
-                  : 'border-slate-700 bg-slate-800/40')
+                ? 'border-l-zinnober bg-zinnober/10'
+                : (istBester ? 'bg-fach/60 ' : 'bg-kabinett/50 ') + skala.kante)
             }
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-baseline justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate font-medium text-slate-100">
-                  {data.tree.nameOf(data.animals[g.animal].node, lang)}
+                <p className="truncate font-tafel text-[15px] text-knochen">
+                  {data.tree.nameOf(tierKnoten, lang)}
                 </p>
-                <p className="truncate text-xs italic text-slate-500">
-                  {data.tree.scientificName(data.animals[g.animal].node)}
+                <p className="binomen truncate text-[11px] text-flechte">
+                  {data.tree.scientificName(tierKnoten)}
                 </p>
               </div>
-              <span className="shrink-0 text-lg" aria-hidden>
-                {feldFuer(g.steps)}
-              </span>
+
+              {!g.correct && (
+                <span className={'shrink-0 font-etikett text-lg tabular-nums ' + skala.text}>{g.steps}</span>
+              )}
             </div>
 
-            <div className="mt-2 border-t border-slate-700/60 pt-2 text-sm">
+            <div className="mt-2 border-t border-linie/70 pt-2">
               {g.correct ? (
-                <span className="font-medium text-emerald-300">{t(lang, 'gefunden')}</span>
+                <p className="font-etikett text-[11px] uppercase tracking-etikett text-zinnober">
+                  {t(lang, 'gefunden')}
+                </p>
               ) : g.insideTarget ? (
-                <span className="font-medium text-amber-300">{t(lang, 'innerhalb')}</span>
+                <p className="text-[13px] text-nah">{t(lang, 'innerhalb')}</p>
               ) : (
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                    {t(lang, 'gemeinsam')}
-                  </span>
-                  <span className="font-medium text-teal-300">{gruppe}</span>
-                  {gruppeLatein && <span className="text-xs italic text-slate-500">{gruppeLatein}</span>}
-                  <span className="text-slate-400">
+                  <span className="etikett">{t(lang, 'gemeinsam')}</span>
+                  <span className="font-tafel text-[14px] text-knochen">{gruppe}</span>
+                  {gruppeLatein && <span className="binomen text-[11px] text-flechte">{gruppeLatein}</span>}
+                  <span className="text-[12px] text-flechte">
                     ·{' '}
-                    {g.steps === 1
-                      ? t(lang, 'nochEinSchritt')
-                      : t(lang, 'nochSchritte', { n: g.steps })}
+                    {g.steps === 1 ? t(lang, 'nochEinSchritt') : t(lang, 'nochSchritte', { n: g.steps })}
                   </span>
                   {istBester && (
-                    <span className="rounded bg-teal-500/20 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-teal-300">
-                      {t(lang, 'besterTipp')}
-                    </span>
+                    <span className="etikett text-nah">· {t(lang, 'besterTipp')}</span>
                   )}
                 </div>
               )}
             </div>
-          </div>
+          </li>
         )
       })}
-    </div>
+    </ol>
   )
 }

@@ -7,7 +7,7 @@ import {
   ladeTagesErgebnis,
   buchePartie,
 } from './data/storage.ts'
-import { applyGuess, canTakeHint, createGame, takeHint, type GameState } from './core/game.ts'
+import { applyGuess, canTakeHint, createGame, takeHint, type BaumModus, type GameState } from './core/game.ts'
 import { dayKey, dailyIndex, puzzleNumber } from './core/daily.ts'
 import type { Lang, TierId } from './core/types.ts'
 import { t, tierName } from './i18n/strings.ts'
@@ -25,6 +25,7 @@ export function App() {
   const anfang = useMemo(ladeEinstellungen, [])
   const [lang, setLang] = useState<Lang>(anfang.lang)
   const [tier, setTier] = useState<TierId>(anfang.tier)
+  const [baumModus, setBaumModus] = useState<BaumModus>(anfang.baumModus)
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
@@ -34,25 +35,22 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    speichereEinstellungen({ lang, tier })
-  }, [lang, tier])
+    speichereEinstellungen({ lang, tier, baumModus })
+  }, [lang, tier, baumModus])
 
-  /** Waehlt ein Zieltier und startet eine Runde. */
-  const starte = useCallback(
-    (d: GameData, m: Modus, stufe: TierId) => {
-      const bereich = d.tierRanges[String(stufe)]
-      const groesse = bereich.to - bereich.from
-      if (groesse <= 0) return
+  /** Wählt ein Zieltier und startet eine Runde. */
+  const starte = useCallback((d: GameData, m: Modus, stufe: TierId) => {
+    const bereich = d.tierRanges[String(stufe)]
+    const groesse = bereich.to - bereich.from
+    if (groesse <= 0) return
 
-      const index =
-        m === 'tag'
-          ? bereich.from + dailyIndex(dayKey(), groesse, 'stufe' + stufe)
-          : bereich.from + Math.floor(Math.random() * groesse)
+    const index =
+      m === 'tag'
+        ? bereich.from + dailyIndex(dayKey(), groesse, 'stufe' + stufe)
+        : bereich.from + Math.floor(Math.random() * groesse)
 
-      setState(createGame(index, d.animals[index].node, { zen: m === 'zen' }))
-    },
-    [],
-  )
+    setState(createGame(index, d.animals[index].node, { zen: m === 'zen' }))
+  }, [])
 
   useEffect(() => {
     if (data) starte(data, modus, tier)
@@ -74,11 +72,11 @@ export function App() {
   if (fehler) {
     return (
       <Zentriert>
-        <p className="text-slate-300">{t(lang, 'ladefehler')}</p>
+        <p className="font-tafel text-knochen">{t(lang, 'ladefehler')}</p>
         <button
           type="button"
           onClick={() => location.reload()}
-          className="mt-4 rounded-xl bg-teal-600 px-4 py-2 text-white"
+          className="mt-5 border border-nah bg-nah/15 px-4 py-2 font-etikett text-[11px] uppercase tracking-etikett text-nah transition hover:bg-nah hover:text-tinte"
         >
           {t(lang, 'erneutVersuchen')}
         </button>
@@ -89,7 +87,7 @@ export function App() {
   if (!data || !state) {
     return (
       <Zentriert>
-        <p className="animate-pulse text-slate-400">{t(lang, 'laedt')}</p>
+        <p className="animate-pulse font-tafel italic text-flechte">{t(lang, 'laedt')}</p>
       </Zentriert>
     )
   }
@@ -97,76 +95,75 @@ export function App() {
   const schonGespielt = modus === 'tag' ? ladeTagesErgebnis(dayKey(), tier) : null
   const fertig = state.status !== 'laeuft'
   const hinweisMoeglich = canTakeHint(state, data.tree)
+  const uebrig = state.zen ? null : state.maxGuesses - state.guesses.length
+
+  const baum = (
+    <TreeView
+      tree={data.tree}
+      state={state}
+      lang={lang}
+      modus={baumModus}
+      animalOfNode={data.animalOfNode}
+    />
+  )
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-6xl flex-col gap-4 p-4 lg:flex-row lg:gap-6 lg:p-6">
-      <div className="flex w-full flex-col gap-4 lg:max-w-md">
-        <header>
+    <div className="mx-auto flex min-h-dvh max-w-[1500px] flex-col gap-5 p-4 lg:flex-row lg:gap-8 lg:p-8">
+      <div className="flex w-full flex-col gap-5 lg:max-w-sm">
+        <header className="border-b border-linie pb-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-50">{t(lang, 'titel')}</h1>
-              <p className="text-sm text-slate-400">{t(lang, 'untertitel')}</p>
+              <h1 className="font-tafel text-[28px] leading-none tracking-tight text-knochen">
+                {t(lang, 'titel')}
+              </h1>
+              <p className="mt-1.5 max-w-[26ch] font-tafel text-[13px] italic leading-snug text-flechte">
+                {t(lang, 'untertitel')}
+              </p>
             </div>
             <button
               type="button"
               onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
-              className="shrink-0 rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-800"
+              className="etikett shrink-0 border border-linie px-2 py-1 transition hover:border-flechte hover:text-knochen"
             >
               {t(lang, 'sprache')}
             </button>
           </div>
         </header>
 
-        <div className="flex gap-1.5 rounded-xl bg-slate-800/60 p-1">
-          {(['tag', 'endlos', 'zen'] as Modus[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setModus(m)}
-              className={
-                'flex-1 rounded-lg px-3 py-2 text-sm transition ' +
-                (modus === m ? 'bg-teal-600 font-medium text-white' : 'text-slate-300 hover:bg-slate-700/60')
-              }
-            >
-              {t(lang, m === 'tag' ? 'modusTag' : m === 'endlos' ? 'modusEndlos' : 'modusZen')}
-            </button>
-          ))}
+        <div>
+          <Segmente
+            werte={['tag', 'endlos', 'zen'] as const}
+            aktiv={modus}
+            beschriften={(m) => t(lang, m === 'tag' ? 'modusTag' : m === 'endlos' ? 'modusEndlos' : 'modusZen')}
+            waehlen={setModus}
+          />
+          <p className="mt-2 text-[12px] leading-snug text-flechte">
+            {t(lang, modus === 'tag' ? 'modusTagBeschreibung' : modus === 'endlos' ? 'modusEndlosBeschreibung' : 'modusZenBeschreibung')}
+          </p>
         </div>
 
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-slate-500">{t(lang, 'stufe')}</span>
-            <div className="flex gap-1.5">
-              {([1, 2, 3] as TierId[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTier(s)}
-                  className={
-                    'rounded-lg border px-2.5 py-1 text-xs transition ' +
-                    (tier === s
-                      ? 'border-teal-500 bg-teal-500/15 text-teal-300'
-                      : 'border-slate-700 text-slate-400 hover:bg-slate-800')
-                  }
-                >
-                  {tierName(lang, s)}
-                </button>
-              ))}
-            </div>
+          <div className="flex items-center gap-3">
+            <span className="etikett">{t(lang, 'stufe')}</span>
+            <Segmente
+              werte={[1, 2, 3] as const}
+              aktiv={tier}
+              beschriften={(s) => tierName(lang, s)}
+              waehlen={setTier}
+              schmal
+            />
           </div>
-          <p className="mt-1.5 text-[11px] text-slate-500">{t(lang, 'stufeHinweis')}</p>
+          <p className="mt-2 text-[12px] leading-snug text-flechte">{t(lang, 'stufeHinweis')}</p>
         </div>
 
         {schonGespielt && !fertig && (
-          <p className="rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-sm text-slate-400">
-            {lang === 'de'
-              ? 'Dieses Tagesrätsel hast du schon gespielt.'
-              : 'You already played today’s puzzle.'}
+          <p className="border-l-2 border-l-linie bg-kabinett/60 px-4 py-2.5 text-[13px] text-flechte">
+            {lang === 'de' ? 'Dieses Tagesrätsel hast du schon gespielt.' : 'You already played today’s puzzle.'}
           </p>
         )}
 
         {!fertig && (
-          <>
+          <div className="space-y-3">
             <GuessInput
               data={data}
               state={state}
@@ -174,22 +171,25 @@ export function App() {
               onGuess={(animal) => setState(applyGuess(state, data.tree, animal, data.animals[animal].node))}
             />
 
-            <div className="flex items-center justify-between text-sm text-slate-400">
-              <span>
+            <div className="flex items-center justify-between">
+              <span className="etikett">
                 {state.zen
                   ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
                   : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
               </span>
-              <button
-                type="button"
-                disabled={!hinweisMoeglich}
-                onClick={() => setState(takeHint(state, data.tree))}
-                className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-300 transition enabled:hover:bg-slate-800 disabled:opacity-40"
-              >
-                {t(lang, 'hinweisNehmen')}
-              </button>
+              <div className="flex items-center gap-3">
+                {uebrig !== null && <Vorrat uebrig={uebrig} gesamt={state.maxGuesses} />}
+                <button
+                  type="button"
+                  disabled={!hinweisMoeglich}
+                  onClick={() => setState(takeHint(state, data.tree))}
+                  className="etikett border border-linie px-2 py-1 transition enabled:hover:border-mittel enabled:hover:text-mittel disabled:opacity-30"
+                >
+                  {t(lang, 'hinweisNehmen')}
+                </button>
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         {fertig && (
@@ -206,37 +206,119 @@ export function App() {
         <button
           type="button"
           onClick={() => setBaumOffen((v) => !v)}
-          className="rounded-xl border border-slate-700 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-800 lg:hidden"
+          className="etikett border border-linie px-4 py-2.5 text-left transition hover:border-flechte hover:text-knochen lg:hidden"
         >
-          {t(lang, 'baum')} {baumOffen ? '▲' : '▼'}
+          {t(lang, 'baum')} {baumOffen ? '−' : '+'}
         </button>
 
-        <div className={baumOffen ? 'h-[60vh] lg:hidden' : 'hidden'}>
-          <BaumRahmen>
-            <TreeView tree={data.tree} state={state} lang={lang} animalOfNode={data.animalOfNode} />
-          </BaumRahmen>
-        </div>
+        {baumOffen && (
+          <div className="h-[62vh] lg:hidden">
+            <Plattenrahmen lang={lang} modus={baumModus} setzeModus={setBaumModus}>
+              {baum}
+            </Plattenrahmen>
+          </div>
+        )}
 
         <GuessList data={data} state={state} lang={lang} />
 
-        <footer className="mt-auto pt-4 text-[11px] leading-relaxed text-slate-600">
+        <footer className="mt-auto border-t border-linie pt-4 font-etikett text-[10px] leading-relaxed text-flechte/60">
           <p>{t(lang, 'datenstand', { datum: data.meta.builtAt })}</p>
-          <p>{t(lang, 'quellen')}</p>
+          <p className="mt-1">{t(lang, 'quellen')}</p>
         </footer>
       </div>
 
-      <div className="hidden min-h-[70vh] flex-1 lg:block">
-        <BaumRahmen>
-          <TreeView tree={data.tree} state={state} lang={lang} animalOfNode={data.animalOfNode} />
-        </BaumRahmen>
+      <div className="hidden min-h-[76vh] flex-1 lg:block">
+        <Plattenrahmen lang={lang} modus={baumModus} setzeModus={setBaumModus}>
+          {baum}
+        </Plattenrahmen>
       </div>
     </div>
   )
 }
 
-function BaumRahmen({ children }: { children: React.ReactNode }) {
+/**
+ * Rahmen um den Stammbaum, mit der Umschaltung zwischen den beiden Ansichten.
+ * Die Leiste oben ist bewusst schmal: Der Baum ist der Hauptdarsteller.
+ */
+function Plattenrahmen({
+  lang,
+  modus,
+  setzeModus,
+  children,
+}: {
+  lang: Lang
+  modus: BaumModus
+  setzeModus: (m: BaumModus) => void
+  children: React.ReactNode
+}) {
   return (
-    <div className="h-full overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">{children}</div>
+    <div className="flex h-full flex-col border border-linie bg-kabinett/40">
+      <div className="flex items-center justify-between gap-3 border-b border-linie px-3 py-2">
+        <span className="etikett">{t(lang, 'baum')}</span>
+        <Segmente
+          werte={['gruppe', 'voll'] as const}
+          aktiv={modus}
+          beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
+          waehlen={setzeModus}
+          schmal
+          titel={t(lang, 'baumModusHilfe')}
+        />
+      </div>
+      <div className="min-h-0 flex-1">{children}</div>
+    </div>
+  )
+}
+
+/** Schmale Segmentleiste im Etikettensatz. Hairlines statt Kacheln. */
+function Segmente<T extends string | number>({
+  werte,
+  aktiv,
+  beschriften,
+  waehlen,
+  schmal,
+  titel,
+}: {
+  werte: readonly T[]
+  aktiv: T
+  beschriften: (wert: T) => string
+  waehlen: (wert: T) => void
+  schmal?: boolean
+  titel?: string
+}) {
+  return (
+    <div className="flex border border-linie" title={titel}>
+      {werte.map((w, i) => (
+        <button
+          key={String(w)}
+          type="button"
+          onClick={() => waehlen(w)}
+          aria-pressed={w === aktiv}
+          className={
+            'font-etikett uppercase tracking-etikett transition ' +
+            (schmal ? 'px-2.5 py-1 text-[10px]' : 'flex-1 px-3 py-2 text-[11px]') +
+            (i > 0 ? ' border-l border-l-linie' : '') +
+            (w === aktiv ? ' bg-nah/15 text-nah' : ' text-flechte hover:bg-fach hover:text-knochen')
+          }
+        >
+          {beschriften(w)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Verbleibende Versuche als Strichliste statt als Zahl. */
+function Vorrat({ uebrig, gesamt }: { uebrig: number; gesamt: number }) {
+  const striche = Math.min(gesamt, 20)
+  return (
+    <span className="flex items-end gap-[2px]" aria-label={String(uebrig)}>
+      {Array.from({ length: striche }, (_, i) => (
+        <span
+          key={i}
+          className={'block w-[2px] ' + (i < uebrig ? 'h-3 bg-flechte' : 'h-1.5 bg-linie')}
+        />
+      ))}
+    </span>
   )
 }
 

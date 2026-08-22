@@ -56,19 +56,19 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
   return (
     <div
       className={
-        'overflow-hidden rounded-2xl border ' +
-        (gewonnen ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/50')
+        'animate-aufblenden overflow-hidden border ' +
+        (gewonnen ? 'border-zinnober/60 bg-zinnober/5' : 'border-linie bg-kabinett')
       }
     >
       <div className="px-5 pt-5">
-        <p className={'text-sm font-medium ' + (gewonnen ? 'text-emerald-400' : 'text-slate-400')}>
+        <p className={'etikett ' + (gewonnen ? 'text-zinnober' : 'text-flechte')}>
           {gewonnen ? t(lang, 'gewonnen') : t(lang, 'verloren')}
-          {gewonnen && ' ' + t(lang, 'inVersuchen', { n: state.guesses.length })}
+          {gewonnen && ' · ' + t(lang, 'inVersuchen', { n: state.guesses.length })}
         </p>
-        <h2 className="mt-1 text-2xl font-semibold text-slate-50">
+        <h2 className="mt-1.5 font-tafel text-[26px] leading-tight text-knochen">
           {data.tree.nameOf(state.targetNode, lang)}
         </h2>
-        <p className="italic text-slate-400">{data.tree.scientificName(state.targetNode)}</p>
+        <p className="binomen text-flechte">{data.tree.scientificName(state.targetNode)}</p>
       </div>
 
       {eintrag?.image && !bildKaputt && (
@@ -81,10 +81,10 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
             // ausser einer sichtbaren Luecke.
             decoding="async"
             onError={() => setBildKaputt(true)}
-            className="h-56 w-full bg-slate-900 object-cover"
+            className="h-56 w-full bg-tinte object-cover"
           />
-          <figcaption className="px-5 py-2 text-[11px] text-slate-500">
-            <a href={eintrag.image.page} target="_blank" rel="noreferrer" className="hover:text-slate-300">
+          <figcaption className="px-5 py-2 font-etikett text-[10px] text-flechte/80">
+            <a href={eintrag.image.page} target="_blank" rel="noreferrer" className="hover:text-knochen">
               {t(lang, 'bildVon', { autor: eintrag.image.author, lizenz: eintrag.image.license })}
             </a>
           </figcaption>
@@ -92,16 +92,16 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
       )}
 
       {bildKaputt && (
-        <div className="mt-4 flex h-24 items-center justify-center bg-slate-900/60 text-sm text-slate-500">
+        <div className="mt-4 flex h-24 items-center justify-center bg-tinte/60 text-[13px] text-flechte">
           {t(lang, 'offline')}
         </div>
       )}
 
       {blurb && (
         <div className="px-5 pt-3">
-          <p className="text-sm leading-relaxed text-slate-300">{blurb.text}</p>
-          <p className="mt-1.5 text-[11px] text-slate-500">
-            <a href={blurb.url} target="_blank" rel="noreferrer" className="hover:text-slate-300">
+          <p className="font-tafel text-[14px] leading-relaxed text-knochen/90">{blurb.text}</p>
+          <p className="mt-2 font-etikett text-[10px] text-flechte/80">
+            <a href={blurb.url} target="_blank" rel="noreferrer" className="hover:text-knochen">
               {t(lang, 'mehrErfahren')}
             </a>
             {' · '}
@@ -111,18 +111,18 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
       )}
 
       <details className="group px-5 pt-4">
-        <summary className="cursor-pointer text-sm text-slate-400 hover:text-slate-200">
+        <summary className="etikett cursor-pointer hover:text-knochen">
           {t(lang, 'vollerPfad')}
         </summary>
         <ol className="mt-2 space-y-0.5 text-xs">
           {pfad.map((eintrag, i) => (
             <li
               key={i}
-              style={{ paddingLeft: Math.min(i, 12) * 8 }}
-              className={eintrag.gefaltet ? 'text-slate-600' : 'text-slate-300'}
+              style={{ paddingLeft: Math.min(i, 14) * 7 }}
+              className={eintrag.gefaltet ? 'text-flechte/50' : 'text-knochen/80'}
             >
-              <span className="italic">{eintrag.sci}</span>
-              {eintrag.trivial && <span className="ml-2 not-italic text-slate-500">{eintrag.trivial}</span>}
+              <span className="binomen">{eintrag.sci}</span>
+              {eintrag.trivial && <span className="ml-2 font-sans text-flechte">{eintrag.trivial}</span>}
             </li>
           ))}
         </ol>
@@ -132,14 +132,14 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
         <button
           type="button"
           onClick={onNewRound}
-          className="rounded-xl bg-teal-600 px-4 py-2.5 font-medium text-white transition hover:bg-teal-500"
+          className="border border-nah bg-nah/15 px-4 py-2.5 font-etikett text-[11px] uppercase tracking-etikett text-nah transition hover:bg-nah hover:text-tinte"
         >
           {t(lang, 'neueRunde')}
         </button>
         <button
           type="button"
           onClick={teilen}
-          className="rounded-xl border border-slate-600 px-4 py-2.5 text-slate-200 transition hover:bg-slate-700"
+          className="border border-linie px-4 py-2.5 font-etikett text-[11px] uppercase tracking-etikett text-flechte transition hover:border-flechte hover:text-knochen"
         >
           {kopiert ? t(lang, 'kopiert') : t(lang, 'teilen')}
         </button>
