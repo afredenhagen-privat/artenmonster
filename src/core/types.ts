@@ -81,6 +81,14 @@ export type BlurbData = Record<string, Blurb>
 export interface MetaData {
   builtAt: string
   counts: { nodes: number; animals: number; tiers: Record<string, number> }
+  /**
+   * Inhaltsstempel der nachgeladenen Textdateien, je Dateiname.
+   *
+   * meta.json liegt im Precache und ist nach einem Deploy sofort neu, die
+   * Textdateien liegen im Laufzeit-Cache und koennen alt sein. Der Stempel haengt
+   * an ihrer Adresse und trennt die Staende auseinander.
+   */
+  textVersion: Record<string, string>
   sources: {
     ncbi: string
     wikidata: string

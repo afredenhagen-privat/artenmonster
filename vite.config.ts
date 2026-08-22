@@ -31,10 +31,20 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
-            // Steckbriefe und Gruppenerklaerungen: erst bei Bedarf, danach dauerhaft.
-            urlPattern: /\/data\/(blurbs|gruppen)\.[a-z]{2}\.json$/,
+            /*
+             * Steckbriefe und Gruppenerklaerungen: erst bei Bedarf, danach dauerhaft.
+             *
+             * Die Adresse traegt den Inhaltsstempel aus meta.json als ?v=, deshalb
+             * muss das Muster die Abfrage mitfassen. Neue Daten heissen neue
+             * Adresse, ein alter Eintrag kann sie nicht beantworten. maxEntries
+             * haelt eine Generation vor und raeumt aeltere weg.
+             */
+            urlPattern: /\/data\/(blurbs|gruppen)\.[a-z]{2}\.json(\?|$)/,
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'artenmonster-blurbs' },
+            options: {
+              cacheName: 'artenmonster-blurbs',
+              expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
           },
           {
             // Tierbilder liegen bewusst nicht im Bundle. Einmal gesehen heisst aber

@@ -10,6 +10,7 @@
 import path from 'node:path'
 import zlib from 'node:zlib'
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import { CONFIG, type TierId } from './config.ts'
 import { PATHS, ensureDirs, readJson, writeJson } from './paths.ts'
 import { THUMB_PREFIX } from './commons.ts'
@@ -21,6 +22,14 @@ import type { NodeTuple } from '../src/core/types.ts'
 function gzipSize(data: unknown): number {
   return zlib.gzipSync(Buffer.from(JSON.stringify(data), 'utf8')).length
 }
+
+/** Kurzer Inhaltsstempel einer fertigen Datei. Nur zur Unterscheidung, nicht kryptografisch. */
+function stempel(datei: string): string {
+  return crypto.createHash('sha1').update(fs.readFileSync(datei)).digest('hex').slice(0, 8)
+}
+
+/** Dateien, die nachgeladen werden und deshalb einen Inhaltsstempel brauchen. */
+const NACHLADBAR = ['blurbs.de.json', 'blurbs.en.json', 'gruppen.de.json', 'gruppen.en.json'] as const
 
 function mb(bytes: number): string {
   return bytes >= 1e6 ? (bytes / 1e6).toFixed(2) + ' MB' : Math.round(bytes / 1024) + ' KB'
@@ -161,7 +170,16 @@ async function main(): Promise<void> {
   }
 
   // --- meta.json -----------------------------------------------------------
-  const meta = {
+  /*
+   * textVersion wird unten nachgetragen, sobald die Dateien geschrieben sind:
+   * Es ist ein Stempel ueber den tatsaechlichen Inhalt.
+   */
+  const meta: {
+    builtAt: string
+    counts: { nodes: number; animals: number; tiers: Record<string, number> }
+    sources: Record<string, string>
+    textVersion: Record<string, string>
+  } = {
     builtAt: new Date().toISOString().slice(0, 10),
     counts: {
       nodes: nodes.length,
@@ -174,9 +192,11 @@ async function main(): Promise<void> {
       wikipedia: 'Wikipedia, CC BY-SA 4.0',
       commons: 'Wikimedia Commons, Lizenz je Bild einzeln angegeben',
     },
+    textVersion: {},
   }
 
   // --- schreiben -----------------------------------------------------------
+  // meta.json steht am Ende, weil es die Stempel der anderen Dateien traegt.
   const dateien: Array<[string, unknown]> = [
     ['tree.json', treeData],
     ['animals.json', animalsData],
@@ -193,6 +213,9 @@ async function main(): Promise<void> {
   console.log('  Datei             roh        gepackt')
   for (const [name, data] of dateien) {
     const file = path.join(PATHS.out, name)
+    if (name === 'meta.json') {
+      for (const n of NACHLADBAR) meta.textVersion[n] = stempel(path.join(PATHS.out, n))
+    }
     writeJson(file, data)
     const roh = fs.statSync(file).size
     const gz = gzipSize(data)

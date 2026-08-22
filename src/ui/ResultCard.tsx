@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GameData } from '../data/load.ts'
-import { imageUrl, loadBlurbs } from '../data/load.ts'
+import { imageUrl, loadBlurbs, textVersion } from '../data/load.ts'
 import type { GameState } from '../core/game.ts'
 import type { Blurb, Lang, TierId } from '../core/types.ts'
 import { t } from '../i18n/strings.ts'
@@ -29,17 +29,18 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
   const animal = data.animalOfNode.get(state.targetNode)
   const eintrag = animal !== undefined ? data.animals[animal] : undefined
   const taxid = data.tree.taxidOf(state.targetNode)
+  const version = textVersion(data, 'blurbs.' + lang + '.json')
 
   useEffect(() => {
     let abgebrochen = false
     setBlurb(null)
-    loadBlurbs(lang).then((alle) => {
+    loadBlurbs(lang, version).then((alle) => {
       if (!abgebrochen) setBlurb(alle[String(taxid)] ?? null)
     })
     return () => {
       abgebrochen = true
     }
-  }, [taxid, lang])
+  }, [taxid, lang, version])
 
   useEffect(() => setBildKaputt(false), [state.targetNode])
 

@@ -36,7 +36,12 @@ export interface GameData {
   search: SearchIndex
   /** Baumknoten zurueck auf den Tierindex. */
   animalOfNode: Map<number, number>
-  meta: { builtAt: string; counts: { nodes: number; animals: number } }
+  meta: {
+    builtAt: string
+    counts: { nodes: number; animals: number }
+    /** Inhaltsstempel der nachgeladenen Dateien, je Dateiname. */
+    textVersion?: Record<string, string>
+  }
 }
 
 function dataUrl(file: string): string {
@@ -82,30 +87,43 @@ export function loadGameData(): Promise<GameData> {
   return cached
 }
 
-const blurbCache = new Map<Lang, Promise<BlurbData>>()
-const gruppenCache = new Map<Lang, Promise<BlurbData>>()
+const textCache = new Map<string, Promise<BlurbData>>()
 
-/** Steckbriefe. Werden erst geholt, wenn der Ergebnisschirm sie braucht. */
-export function loadBlurbs(lang: Lang): Promise<BlurbData> {
-  let p = blurbCache.get(lang)
+/**
+ * Laedt eine der beiden Textdateien, mit ihrem Inhaltsstempel in der Adresse.
+ *
+ * Der Stempel steht in meta.json und liegt damit im Precache: Er ist nach einem
+ * Deploy sofort neu, waehrend die Textdatei selbst im Laufzeit-Cache des Service
+ * Workers noch alt sein kann. Neue Daten heissen so eine neue Adresse, und die
+ * kann der Cache nicht mit einem alten Stand beantworten. Ohne den Stempel blieb
+ * nach jedem Neubau der Daten fuer eine Sitzung der alte Stand stehen.
+ */
+function ladeTexte(datei: string, version: string | undefined): Promise<BlurbData> {
+  const schluessel = datei + '?' + (version ?? '')
+  let p = textCache.get(schluessel)
   if (!p) {
-    p = getJson<BlurbData>('blurbs.' + lang + '.json').catch(() => ({}) as BlurbData)
-    blurbCache.set(lang, p)
+    p = getJson<BlurbData>(version ? datei + '?v=' + version : datei).catch(() => ({}) as BlurbData)
+    textCache.set(schluessel, p)
   }
   return p
+}
+
+/** Steckbriefe. Werden erst geholt, wenn jemand ein Tier antippt oder loest. */
+export function loadBlurbs(lang: Lang, version?: string): Promise<BlurbData> {
+  return ladeTexte('blurbs.' + lang + '.json', version)
 }
 
 /**
  * Erklaerungen zu den Gruppen im Baum. Wie die Steckbriefe erst bei Bedarf, sie
  * gehoeren nicht zu dem, was das Spiel zum Laufen braucht.
  */
-export function loadGruppen(lang: Lang): Promise<BlurbData> {
-  let p = gruppenCache.get(lang)
-  if (!p) {
-    p = getJson<BlurbData>('gruppen.' + lang + '.json').catch(() => ({}) as BlurbData)
-    gruppenCache.set(lang, p)
-  }
-  return p
+export function loadGruppen(lang: Lang, version?: string): Promise<BlurbData> {
+  return ladeTexte('gruppen.' + lang + '.json', version)
+}
+
+/** Der Inhaltsstempel einer nachladbaren Datei, falls die Daten ihn kennen. */
+export function textVersion(data: GameData, datei: string): string | undefined {
+  return data.meta.textVersion?.[datei]
 }
 
 export function imageUrl(data: GameData, image: ImageInfo): string {

@@ -40,6 +40,8 @@ interface Props {
   animalOfNode: Map<number, number>
   /** Einleitungsabsätze zu den Gruppen, nach NCBI-Taxon-ID. */
   gruppen: BlurbData
+  /** Inhaltsstempel der Steckbriefdatei, damit kein alter Cache-Stand kommt. */
+  steckbriefVersion?: string
 }
 
 /*
@@ -113,7 +115,7 @@ function waerme(steps: number): Ton {
   return SKALA[Math.max(1, Math.min(steps, 3))] ?? KALT
 }
 
-export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Props) {
+export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, steckbriefVersion }: Props) {
   const zoom = useRef<ReactZoomPanPinchRef | null>(null)
   const rahmen = useRef<HTMLDivElement | null>(null)
   const [gewaehlt, setGewaehlt] = useState<number | null>(null)
@@ -130,13 +132,13 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
   useEffect(() => {
     if (!willSteckbriefe) return
     let abgebrochen = false
-    loadBlurbs(lang).then((b) => {
+    loadBlurbs(lang, steckbriefVersion).then((b) => {
       if (!abgebrochen) setSteckbriefe(b)
     })
     return () => {
       abgebrochen = true
     }
-  }, [willSteckbriefe, lang])
+  }, [willSteckbriefe, lang, steckbriefVersion])
 
   const layout = useMemo(() => {
     const sichtbar = revealedNodes(state, tree, modus)

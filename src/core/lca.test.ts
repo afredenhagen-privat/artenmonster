@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+import crypto from 'node:crypto'
 import { Tree } from './tree.ts'
 import { SearchIndex } from './search.ts'
 import type { TreeData } from './types.ts'
@@ -33,6 +34,9 @@ beschreibe('Erzeugte Spieldaten', () => {
     JSON.parse(fs.readFileSync(path.join(DATA, datei), 'utf8')) as Record<string, { text: string; url: string }>
   const blurbs = { de: lies('blurbs.de.json'), en: lies('blurbs.en.json') }
   const gruppenTexte = { de: lies('gruppen.de.json'), en: lies('gruppen.en.json') }
+  const meta = JSON.parse(fs.readFileSync(path.join(DATA, 'meta.json'), 'utf8')) as {
+    textVersion?: Record<string, string>
+  }
 
   const tree = new Tree(treeRaw)
   const index = new SearchIndex(searchRaw)
@@ -189,6 +193,23 @@ beschreibe('Erzeugte Spieldaten', () => {
       }
       expect(geprueft).toBeGreaterThan(0)
       expect(passend / geprueft).toBeGreaterThan(0.9)
+    })
+
+    it('stempelt jede nachgeladene Datei mit ihrem Inhalt', () => {
+      /*
+       * Der Stempel steht in meta.json, die Datei selbst liegt im Laufzeit-Cache
+       * des Service Workers. Stimmt er nicht mit dem Inhalt ueberein, holt die App
+       * nach einem Deploy weiter den alten Stand.
+       */
+      const dateien = ['blurbs.de.json', 'blurbs.en.json', 'gruppen.de.json', 'gruppen.en.json']
+      for (const datei of dateien) {
+        const soll = crypto
+          .createHash('sha1')
+          .update(fs.readFileSync(path.join(DATA, datei)))
+          .digest('hex')
+          .slice(0, 8)
+        expect(meta.textVersion?.[datei], 'Stempel fehlt oder ist veraltet: ' + datei).toBe(soll)
+      }
     })
 
     it('nennt namentlich das richtige Tier', () => {

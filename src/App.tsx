@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadGameData, loadGruppen, type GameData } from './data/load.ts'
+import { loadGameData, loadGruppen, textVersion, type GameData } from './data/load.ts'
 import type { Thema } from './data/storage.ts'
 import {
   ladeEinstellungen,
@@ -61,16 +61,18 @@ export function App() {
     }
   }, [thema])
 
-  // Erklaerungen zu den Gruppen kommen nach, sobald die Sprache feststeht.
+  // Erklaerungen zu den Gruppen kommen nach, sobald die Spieldaten stehen: Erst
+  // mit ihnen ist der Inhaltsstempel bekannt, der die richtige Fassung holt.
   useEffect(() => {
+    if (!data) return
     let abgebrochen = false
-    loadGruppen(lang).then((g) => {
+    loadGruppen(lang, textVersion(data, 'gruppen.' + lang + '.json')).then((g) => {
       if (!abgebrochen) setGruppen(g)
     })
     return () => {
       abgebrochen = true
     }
-  }, [lang])
+  }, [data, lang])
 
   /** Wählt ein Zieltier und startet eine Runde. */
   const starte = useCallback((d: GameData, m: Modus, stufe: TierId) => {
@@ -149,6 +151,7 @@ export function App() {
       modus={baumModus}
       animalOfNode={data.animalOfNode}
       gruppen={gruppen}
+      steckbriefVersion={textVersion(data, 'blurbs.' + lang + '.json')}
     />
   )
 
