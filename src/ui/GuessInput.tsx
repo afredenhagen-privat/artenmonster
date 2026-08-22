@@ -29,6 +29,7 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
   const [klappe, setKlappe] = useState({ nachOben: false, maxHoehe: 288 })
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const schliessTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const animalNodes = useMemo(() => data.animals.map((a) => a.node), [data])
 
@@ -86,6 +87,31 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
     listRef.current?.children[aktiv]?.scrollIntoView({ block: 'nearest' })
   }, [aktiv])
 
+  useEffect(() => () => { if (schliessTimer.current) clearTimeout(schliessTimer.current) }, [])
+
+  /*
+   * Beim Verlassen des Feldes schliesst die Liste verzoegert, damit ein Klick
+   * auf einen Vorschlag noch ankommt. Der Timer muss aber abgebrochen werden,
+   * sobald das Feld den Fokus zurueckbekommt: Sonst schliesst ein alter Timer
+   * die Liste, obwohl laengst wieder getippt wird, und beim naechsten Wort
+   * erscheinen keine Vorschlaege mehr.
+   */
+  function oeffnen(): void {
+    if (schliessTimer.current) {
+      clearTimeout(schliessTimer.current)
+      schliessTimer.current = null
+    }
+    setFokus(true)
+  }
+
+  function spaeterSchliessen(): void {
+    if (schliessTimer.current) clearTimeout(schliessTimer.current)
+    schliessTimer.current = setTimeout(() => {
+      schliessTimer.current = null
+      setFokus(false)
+    }, 150)
+  }
+
   function absenden(animal: number | undefined): void {
     if (animal === undefined) {
       setMeldung(t(lang, 'nichtGefunden'))
@@ -123,10 +149,15 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
           type="text"
           value={text}
           disabled={disabled}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value)
+            // Wer tippt, will Vorschlaege sehen, auch wenn der Zustand aus
+            // irgendeinem Grund auf "nicht fokussiert" stand.
+            oeffnen()
+          }}
           onKeyDown={beiTaste}
-          onFocus={() => setFokus(true)}
-          onBlur={() => setTimeout(() => setFokus(false), 150)}
+          onFocus={oeffnen}
+          onBlur={spaeterSchliessen}
           placeholder={t(lang, 'eingabe')}
           autoComplete="off"
           autoCorrect="off"
@@ -158,6 +189,9 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
       {vorschlaege.length > 0 && !disabled && fokus && (
         <ul
           ref={listRef}
+          // Verhindert, dass das Eingabefeld beim Klick auf einen Vorschlag
+          // ueberhaupt den Fokus verliert. Damit entfaellt das Timer-Spiel.
+          onMouseDown={(e) => e.preventDefault()}
           style={{ maxHeight: klappe.maxHoehe }}
           className={
             'absolute z-20 w-full overflow-y-auto border border-linie bg-kabinett shadow-2xl shadow-tinte ' +
