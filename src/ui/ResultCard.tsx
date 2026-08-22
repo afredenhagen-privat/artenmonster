@@ -76,7 +76,10 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
           <img
             src={imageUrl(data, eintrag.image)}
             alt={data.tree.nameOf(state.targetNode, lang)}
-            loading="lazy"
+            // Bewusst eager: Es ist das einzige Bild des Schirms und immer sichtbar,
+            // sobald der Schirm erscheint. Verzoegertes Laden brachte hier nichts
+            // ausser einer sichtbaren Luecke.
+            decoding="async"
             onError={() => setBildKaputt(true)}
             className="h-56 w-full bg-slate-900 object-cover"
           />

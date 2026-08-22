@@ -9,7 +9,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/*.png'],
+      // Kein includeAssets: die globPatterns unten fassen svg und png schon,
+      // sonst stehen Favicon und Icons doppelt im Precache-Manifest.
       manifest: {
         name: 'Artenmonster',
         short_name: 'Artenmonster',
