@@ -131,7 +131,64 @@ function pickName(c: Candidate, lang: 'de' | 'en'): string {
     const name = ohneKlammerzusatz(roh)
     if (name && name.toLowerCase() !== sci) return name
   }
+
+  /*
+   * Im Englischen darf der wissenschaftliche Name einspringen.
+   *
+   * Die englische Wikipedia fuehrt Insekten fast immer unter dem lateinischen
+   * Namen, waehrend die deutsche einen Trivialnamen bildet: Lasius flavus heisst
+   * auf Deutsch Gelbe Wiesenameise und auf Englisch eben Lasius flavus. Das als
+   * fehlenden Namen zu werten hat 2327 Insekten aussortiert, darunter 699 Kaefer
+   * und 39 Ameisen. Bei Voegeln traf es nur vier.
+   *
+   * Im Deutschen bleibt es bei der strengen Regel: Ein Spiel, in dem man
+   * Carabus auronitens eintippen muss, macht keinen Spass.
+   */
+  if (lang === 'en') {
+    const latein = ohneKlammerzusatz(c.titleEn) || (c.sci ?? '')
+    if (latein) return latein
+  }
   return ''
+}
+
+/**
+ * Verteilt die Plaetze auf die Grossgruppen und fuellt den Rest global auf.
+ *
+ * Jede Gruppe bekommt ihre Plaetze nach eigener Bekanntheitsreihenfolge. Eine
+ * Gruppe, die ihr Ziel nicht fuellen kann, gibt die uebrigen Plaetze an die
+ * globale Auffuellung ab.
+ */
+function waehleMitQuote(
+  verfuegbar: readonly PoolAnimal[],
+  tree: TaxTree,
+  gesamt: number,
+  stats: Record<string, number>,
+): PoolAnimal[] {
+  const gewaehlt = new Set<number>()
+  const ergebnis: PoolAnimal[] = []
+
+  for (const gruppe of CONFIG.GRUPPEN) {
+    let n = 0
+    for (const tier of verfuegbar) {
+      if (n >= gruppe.ziel || ergebnis.length >= gesamt) break
+      if (gewaehlt.has(tier.taxid)) continue
+      if (!isDescendantOf(tier.taxid, gruppe.taxid, tree)) continue
+      gewaehlt.add(tier.taxid)
+      ergebnis.push(tier)
+      n++
+    }
+    stats['gruppe_' + gruppe.name] = n
+  }
+
+  for (const tier of verfuegbar) {
+    if (ergebnis.length >= gesamt) break
+    if (gewaehlt.has(tier.taxid)) continue
+    gewaehlt.add(tier.taxid)
+    ergebnis.push(tier)
+  }
+
+  // Nach Bekanntheit sortiert, denn danach werden gleich die Stufen geschnitten.
+  return ergebnis.sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
 }
 
 /**
@@ -251,10 +308,10 @@ function buildPool(candidates: Candidate[], tree: TaxTree): { pool: PoolAnimal[]
     pool.push(kandidat)
   }
 
-  // Stufen schneiden.
+  // Auswahl nach Quote statt reiner Bekanntheit, damit nicht alles Vogel wird.
   const grenzen = [CONFIG.TIERS[1].size, CONFIG.TIERS[1].size + CONFIG.TIERS[2].size]
   const gesamt = grenzen[1] + CONFIG.TIERS[3].size
-  const geschnitten = pool.slice(0, gesamt)
+  const geschnitten = waehleMitQuote(pool, tree, gesamt, stats)
   geschnitten.forEach((p, i) => {
     const ov = overrides.get(p.taxid)
     p.tier = ov?.tier ?? (i < grenzen[0] ? 1 : i < grenzen[1] ? 2 : 3)
@@ -297,6 +354,11 @@ async function main(): Promise<void> {
   console.log('    ohne Bild:                    ' + stats.keinBild)
   console.log('    per Override verworfen:       ' + stats.verworfen)
   console.log('    lag im Baum unter einem bekannteren Tier: ' + stats.ineinander)
+  console.log('  Verteilung auf die Grossgruppen:')
+  for (const g of CONFIG.GRUPPEN) {
+    const n = stats['gruppe_' + g.name] ?? 0
+    console.log('    ' + g.name.padEnd(22) + String(n).padStart(5) + ' von ' + String(g.ziel).padStart(5) + ' Plaetzen')
+  }
   console.log('  Pool: ' + pool.length + ' Tiere')
   for (const t of [1, 2, 3] as TierId[]) {
     console.log('    Stufe ' + t + ' (' + CONFIG.TIERS[t].name.de + '): ' + pool.filter((p) => p.tier === t).length)

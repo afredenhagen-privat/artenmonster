@@ -67,6 +67,19 @@ export class Tree {
     return Boolean(lang === 'de' ? this.nodes[i][4] : this.nodes[i][5])
   }
 
+  /**
+   * Der wissenschaftliche Name, aber nur wenn er sich vom angezeigten
+   * unterscheidet.
+   *
+   * Die englische Wikipedia fuehrt viele Insekten unter ihrem lateinischen
+   * Namen, der englische Name eines Kaefers ist dann eben Carabus auronitens.
+   * Ohne diese Pruefung stuende er in der Anzeige zweimal untereinander.
+   */
+  latinIfDistinct(i: number, lang: Lang): string | null {
+    const sci = this.nodes[i][3]
+    return this.nameOf(i, lang) === sci ? null : sci
+  }
+
   /** Pfad von einem Knoten bis zur Wurzel, beginnend beim Knoten selbst. */
   pathToRoot(i: number): number[] {
     const out: number[] = []

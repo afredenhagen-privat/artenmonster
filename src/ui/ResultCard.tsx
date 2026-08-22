@@ -68,7 +68,9 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
         <h2 className="mt-1.5 font-tafel text-[26px] leading-tight text-knochen">
           {data.tree.nameOf(state.targetNode, lang)}
         </h2>
-        <p className="binomen text-flechte">{data.tree.scientificName(state.targetNode)}</p>
+        {data.tree.latinIfDistinct(state.targetNode, lang) && (
+          <p className="binomen text-flechte">{data.tree.latinIfDistinct(state.targetNode, lang)}</p>
+        )}
       </div>
 
       {eintrag?.image && !bildKaputt && (
@@ -170,7 +172,7 @@ function pfadMitZwischenstufen(data: GameData, blatt: number, lang: Lang): PfadE
     }
     out.push({
       sci: data.tree.scientificName(i),
-      trivial: data.tree.hasCommonName(i, lang) ? data.tree.nameOf(i, lang) : undefined,
+      trivial: data.tree.latinIfDistinct(i, lang) ? data.tree.nameOf(i, lang) : undefined,
       gefaltet: false,
     })
   }

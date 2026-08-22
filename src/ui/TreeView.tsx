@@ -228,7 +228,7 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
                     x={n.x}
                     y={n.y}
                     name={tree.nameOf(index, lang)}
-                    latein={tree.hasCommonName(index, lang) ? tree.scientificName(index) : null}
+                    latein={tree.latinIfDistinct(index, lang)}
                     rang={rangName(tree.rankOf(index), lang)}
                     istTier={istTier}
                     schritte={tipp?.steps}
@@ -260,8 +260,10 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
               <p className="etikett">{rangName(tree.rankOf(gewaehlt), lang) || t(lang, 'gruppe')}</p>
               <p className="mt-0.5 font-tafel text-[15px] text-knochen">
                 {tree.nameOf(gewaehlt, lang)}
-                {tree.hasCommonName(gewaehlt, lang) && (
-                  <span className="binomen ml-2 text-[12px] text-flechte">{tree.scientificName(gewaehlt)}</span>
+                {tree.latinIfDistinct(gewaehlt, lang) && (
+                  <span className="binomen ml-2 text-[12px] text-flechte">
+                    {tree.latinIfDistinct(gewaehlt, lang)}
+                  </span>
                 )}
               </p>
             </div>
@@ -306,7 +308,7 @@ function Ast({
   const unten = ziel.y - 22
   const knick = quelle.y + reihe * 0.5
   const ausgelassen = ziel.data.ausgelassen
-  const farbe = ton ? ton.linie : 'text-linie'
+  const farbe = ton ? ton.linie : 'text-ast'
 
   return (
     <g>
@@ -320,7 +322,7 @@ function Ast({
         fill="none"
         stroke="currentColor"
         strokeWidth={1}
-        className="text-linie"
+        className="text-ast"
       />
       <path
         d={`M${ziel.x},${knick} L${ziel.x},${unten}`}
@@ -426,7 +428,7 @@ function Marke({
           y2={14}
           stroke="currentColor"
           strokeWidth={betont ? 1 : 0.5}
-          className={istHinweis ? 'text-mittel' : gewaehlt ? 'text-nah' : betont ? 'text-flechte' : 'text-linie'}
+          className={istHinweis ? 'text-mittel' : gewaehlt ? 'text-nah' : betont ? 'text-flechte' : 'text-ast'}
         />
         {latein && (
           <text textAnchor="middle" y={26} className="fill-flechte/70 font-tafel text-[10px] italic">
@@ -443,7 +445,7 @@ function Marke({
     ? 'fill-zinnober stroke-zinnober'
     : schritte !== undefined
       ? 'fill-kabinett ' + waerme(schritte).strich
-      : 'fill-kabinett stroke-linie'
+      : 'fill-kabinett stroke-ast'
 
   return (
     <g transform={`translate(${x - breite / 2}, ${y - hoehe / 2 + 4})`} className="animate-einblenden">

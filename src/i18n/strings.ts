@@ -65,6 +65,10 @@ const STRINGS = {
     schliessen: 'Schließen',
     gesuchtesTier: 'Hier steckt die Lösung',
     vollbild: 'Vollbild',
+    themaHell: 'Hell',
+    themaDunkel: 'Dunkel',
+    themaSystem: 'System',
+    themaWechseln: 'Darstellung wechseln',
     vollbildVerlassen: 'Vollbild verlassen',
 
     laedt: 'Lade Stammbaum ...',
@@ -138,6 +142,10 @@ const STRINGS = {
     schliessen: 'Close',
     gesuchtesTier: 'The answer is in here',
     vollbild: 'Full screen',
+    themaHell: 'Light',
+    themaDunkel: 'Dark',
+    themaSystem: 'System',
+    themaWechseln: 'Switch appearance',
     vollbildVerlassen: 'Leave full screen',
 
     laedt: 'Loading the tree ...',

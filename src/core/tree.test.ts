@@ -93,6 +93,23 @@ describe('Tree', () => {
     expect(ohneTrivialname.hasCommonName(0, 'de')).toBe(false)
   })
 
+  it('zeigt Latein nur, wenn es sich vom angezeigten Namen unterscheidet', () => {
+    // Loewe heisst auf Deutsch Loewe, das Latein gehoert also daneben.
+    expect(t.latinIfDistinct(LOEWE, 'de')).toBe('Panthera leo')
+
+    /*
+     * Bei vielen Insekten ist der englische Name der lateinische, weil die
+     * englische Wikipedia sie so fuehrt. Dann waere die zweite Zeile eine
+     * Wiederholung und faellt weg.
+     */
+    const kaefer = new Tree({
+      ranks: ['species'],
+      nodes: [[1, -1, 0, 'Carabus auronitens', 'Goldglänzender Laufkäfer', 'Carabus auronitens']],
+    })
+    expect(kaefer.latinIfDistinct(0, 'de')).toBe('Carabus auronitens')
+    expect(kaefer.latinIfDistinct(0, 'en')).toBeNull()
+  })
+
   it('erkennt Vorfahren auf dem Pfad', () => {
     expect(t.isAncestorOf(3, LOEWE)).toBe(true)
     expect(t.isAncestorOf(4, LOEWE)).toBe(false)

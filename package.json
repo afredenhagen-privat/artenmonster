@@ -17,7 +17,9 @@
     "data:tree": "tsx tools/4-build-tree.ts",
     "data:emit": "tsx tools/5-emit.ts",
     "data:all": "npm run data:ncbi && npm run data:wikidata && npm run data:enrich && npm run data:tree && npm run data:emit",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "data:gruppen": "tsx tools/gruppen-analyse.ts",
+    "data:stufen": "tsx tools/stufen-check.ts"
   },
   "dependencies": {
     "d3-hierarchy": "^3.1.2",

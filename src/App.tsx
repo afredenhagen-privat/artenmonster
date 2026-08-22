@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadGameData, loadGruppen, type GameData } from './data/load.ts'
+import type { Thema } from './data/storage.ts'
 import {
   ladeEinstellungen,
   speichereEinstellungen,
@@ -27,6 +28,7 @@ export function App() {
   const [lang, setLang] = useState<Lang>(anfang.lang)
   const [tier, setTier] = useState<TierId>(anfang.tier)
   const [baumModus, setBaumModus] = useState<BaumModus>(anfang.baumModus)
+  const [thema, setThema] = useState<Thema>(anfang.thema)
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
@@ -38,8 +40,26 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    speichereEinstellungen({ lang, tier, baumModus })
-  }, [lang, tier, baumModus])
+    speichereEinstellungen({ lang, tier, baumModus, thema })
+  }, [lang, tier, baumModus, thema])
+
+  /*
+   * Die Farbwahl haengt am Wurzelelement, damit sie ohne Ausnahme fuer alles
+   * gilt, auch fuer das Vollbild. Ohne gesetztes data-theme entscheidet die
+   * Systemeinstellung, das regelt index.css.
+   */
+  useEffect(() => {
+    const wurzel = document.documentElement
+    if (thema === 'system') wurzel.removeAttribute('data-theme')
+    else wurzel.setAttribute('data-theme', thema)
+
+    // Die Adressleiste auf dem Handy soll mitziehen.
+    const marke = document.querySelector('meta[name="theme-color"]')
+    if (marke) {
+      const grund = getComputedStyle(document.body).backgroundColor
+      marke.setAttribute('content', grund)
+    }
+  }, [thema])
 
   // Erklaerungen zu den Gruppen kommen nach, sobald die Sprache feststeht.
   useEffect(() => {
@@ -145,13 +165,23 @@ export function App() {
                 {t(lang, 'untertitel')}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
-              className="etikett shrink-0 border border-linie px-2 py-1 transition hover:border-flechte hover:text-knochen"
-            >
-              {t(lang, 'sprache')}
-            </button>
+            <div className="flex shrink-0 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setThema(naechstesThema(thema))}
+                title={t(lang, 'themaWechseln')}
+                className="etikett border border-linie px-2 py-1 transition hover:border-flechte hover:text-knochen"
+              >
+                {t(lang, thema === 'hell' ? 'themaHell' : thema === 'dunkel' ? 'themaDunkel' : 'themaSystem')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
+                className="etikett border border-linie px-2 py-1 transition hover:border-flechte hover:text-knochen"
+              >
+                {t(lang, 'sprache')}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -440,9 +470,16 @@ function ErgebnisZeile({ data, state, lang }: { data: GameData; state: GameState
         {gewonnen ? t(lang, 'gewonnen') : t(lang, 'verloren')}
       </span>
       <span className="font-tafel text-[16px] text-knochen">{data.tree.nameOf(state.targetNode, lang)}</span>
-      <span className="binomen text-[12px] text-flechte">{data.tree.scientificName(state.targetNode)}</span>
+      <span className="binomen text-[12px] text-flechte">
+        {data.tree.latinIfDistinct(state.targetNode, lang) ?? ''}
+      </span>
     </p>
   )
+}
+
+/** System, hell, dunkel und wieder von vorn. */
+function naechstesThema(jetzt: Thema): Thema {
+  return jetzt === 'system' ? 'hell' : jetzt === 'hell' ? 'dunkel' : 'system'
 }
 
 function Zentriert({ children }: { children: React.ReactNode }) {

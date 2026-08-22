@@ -2,9 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Zwei Fassungen desselben Kabinetts.
+ *
+ * Nacht: die naturkundliche Sammlung bei geschlossenen Läden. Tiefes Tintengrün,
+ * Knochenweiß, warme Metalle als Akzent.
+ *
+ * Tag: dieselbe Sammlung am Fenster. Warmes Papier statt Tinte, Tinte statt
+ * Knochen. Die Wärmeskala bleibt dieselbe Reihenfolge, nur dunkler abgestimmt,
+ * denn auf hellem Grund braucht sie mehr Tiefe, um lesbar zu bleiben.
+ *
+ * Ohne ausdrückliche Wahl entscheidet die Systemeinstellung. Ein gesetztes
+ * data-theme übersteuert sie.
+ */
 @layer base {
-  html {
+  :root {
+    --tinte: 13 26 24;
+    --kabinett: 20 35 31;
+    --fach: 28 47 41;
+    --linie: 38 58 53;
+    /* Die Aeste des Stammbaums sind Information, keine Zier. Sie stehen
+       deshalb kraeftiger als die Rahmenlinien und erreichen die 3:1, die
+       fuer Grafik gefordert sind. */
+    --ast: 82 110 101;
+    --knochen: 237 230 214;
+    --flechte: 138 154 146;
+
+    --fern: 104 134 148;
+    --weit: 110 145 126;
+    --mittel: 163 139 62;
+    --nah: 201 116 58;
+    --zinnober: 217 81 43;
+
     color-scheme: dark;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme='dunkel']) {
+      --tinte: 237 232 218;
+      --kabinett: 248 244 235;
+      --fach: 228 221 203;
+      --linie: 145 137 116;
+    --ast: 132 124 104;
+      --ast: 132 124 104;
+      --knochen: 23 37 31;
+      --flechte: 88 100 93;
+
+      --fern: 58 84 96;
+      --weit: 70 100 82;
+      --mittel: 120 100 34;
+      --nah: 158 80 28;
+      --zinnober: 179 58 24;
+
+      color-scheme: light;
+    }
+  }
+
+  :root[data-theme='hell'] {
+    /*
+     * Kraeftiger als die Nachtfassung: Auf Papier braucht der Nebentext mehr
+     * Tiefe, und die Haarlinien tragen im Stammbaum Information, muessen also
+     * die 3:1 erreichen, die fuer Grafik gefordert sind.
+     */
+    --tinte: 237 232 218;
+    --kabinett: 248 244 235;
+    --fach: 228 221 203;
+    --linie: 145 137 116;
+    --knochen: 23 37 31;
+    --flechte: 88 100 93;
+
+    --fern: 58 84 96;
+    --weit: 70 100 82;
+    --mittel: 120 100 34;
+    --nah: 158 80 28;
+    --zinnober: 179 58 24;
+
+    color-scheme: light;
   }
 
   body {

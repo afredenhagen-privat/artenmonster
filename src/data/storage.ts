@@ -10,11 +10,15 @@ import type { Lang, TierId } from '../core/types.ts'
 
 const PREFIX = 'artenmonster:'
 
+/** 'system' folgt der Einstellung des Geraets, alles andere uebersteuert sie. */
+export type Thema = 'system' | 'hell' | 'dunkel'
+
 export interface Einstellungen {
   lang: Lang
   tier: TierId
   /** Wie viel vom Stammbaum gezeigt wird. */
   baumModus: BaumModus
+  thema: Thema
 }
 
 export interface TagesErgebnis {
@@ -59,6 +63,7 @@ export function ladeEinstellungen(): Einstellungen {
     lang: gespeichert.lang ?? browserSprache,
     tier: gespeichert.tier ?? 1,
     baumModus: gespeichert.baumModus ?? 'gruppe',
+    thema: gespeichert.thema ?? 'system',
   }
 }
 

@@ -53,7 +53,7 @@ export function GuessList({ data, state, lang }: Props) {
         const skala = waerme(g.steps)
         const tierKnoten = data.animals[g.animal].node
         const gruppe = data.tree.nameOf(g.lca, lang)
-        const gruppeLatein = data.tree.hasCommonName(g.lca, lang) ? data.tree.scientificName(g.lca) : null
+        const gruppeLatein = data.tree.latinIfDistinct(g.lca, lang)
 
         return (
           <li
@@ -70,9 +70,11 @@ export function GuessList({ data, state, lang }: Props) {
                 <p className="truncate font-tafel text-[15px] text-knochen">
                   {data.tree.nameOf(tierKnoten, lang)}
                 </p>
-                <p className="binomen truncate text-[11px] text-flechte">
-                  {data.tree.scientificName(tierKnoten)}
-                </p>
+                {data.tree.latinIfDistinct(tierKnoten, lang) && (
+                  <p className="binomen truncate text-[11px] text-flechte">
+                    {data.tree.latinIfDistinct(tierKnoten, lang)}
+                  </p>
+                )}
               </div>
 
               {!g.correct && (

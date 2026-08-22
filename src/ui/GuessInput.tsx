@@ -215,7 +215,7 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
                 >
                   <span className="font-tafel text-[14px] text-knochen">{data.tree.nameOf(node, lang)}</span>
                   <span className="binomen shrink-0 text-[11px] text-flechte">
-                    {data.tree.scientificName(node)}
+                    {data.tree.latinIfDistinct(node, lang) ?? ''}
                   </span>
                 </button>
               </li>

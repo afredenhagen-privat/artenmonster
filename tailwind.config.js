@@ -12,21 +12,27 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /*
+       * Die Farben stehen als CSS-Variablen in index.css, einmal fuer Nacht und
+       * einmal fuer Tag. Die rgb(...)-Schreibweise mit <alpha-value> ist noetig,
+       * damit Abstufungen wie bg-kabinett/60 weiter funktionieren.
+       */
       colors: {
-        tinte: '#0D1A18',
-        kabinett: '#14231F',
-        fach: '#1C2F29',
-        linie: '#263A35',
-        knochen: '#EDE6D6',
-        flechte: '#8A9A92',
+        tinte: 'rgb(var(--tinte) / <alpha-value>)',
+        kabinett: 'rgb(var(--kabinett) / <alpha-value>)',
+        fach: 'rgb(var(--fach) / <alpha-value>)',
+        linie: 'rgb(var(--linie) / <alpha-value>)',
+        ast: 'rgb(var(--ast) / <alpha-value>)',
+        knochen: 'rgb(var(--knochen) / <alpha-value>)',
+        flechte: 'rgb(var(--flechte) / <alpha-value>)',
 
         // Wärmeskala nach verbleibenden Verzweigungen bis zur Lösung,
         // von kalt (weit weg) nach warm (fast dran).
-        fern: '#3F5A66',
-        weit: '#5C7A6B',
-        mittel: '#A38B3E',
-        nah: '#C9743A',
-        zinnober: '#D9512B',
+        fern: 'rgb(var(--fern) / <alpha-value>)',
+        weit: 'rgb(var(--weit) / <alpha-value>)',
+        mittel: 'rgb(var(--mittel) / <alpha-value>)',
+        nah: 'rgb(var(--nah) / <alpha-value>)',
+        zinnober: 'rgb(var(--zinnober) / <alpha-value>)',
       },
       fontFamily: {
         // Wissenschaftliche Namen und Überschriften. Georgia ist auf jedem System
