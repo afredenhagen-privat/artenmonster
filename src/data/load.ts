@@ -83,6 +83,7 @@ export function loadGameData(): Promise<GameData> {
 }
 
 const blurbCache = new Map<Lang, Promise<BlurbData>>()
+const gruppenCache = new Map<Lang, Promise<BlurbData>>()
 
 /** Steckbriefe. Werden erst geholt, wenn der Ergebnisschirm sie braucht. */
 export function loadBlurbs(lang: Lang): Promise<BlurbData> {
@@ -90,6 +91,19 @@ export function loadBlurbs(lang: Lang): Promise<BlurbData> {
   if (!p) {
     p = getJson<BlurbData>('blurbs.' + lang + '.json').catch(() => ({}) as BlurbData)
     blurbCache.set(lang, p)
+  }
+  return p
+}
+
+/**
+ * Erklaerungen zu den Gruppen im Baum. Wie die Steckbriefe erst bei Bedarf, sie
+ * gehoeren nicht zu dem, was das Spiel zum Laufen braucht.
+ */
+export function loadGruppen(lang: Lang): Promise<BlurbData> {
+  let p = gruppenCache.get(lang)
+  if (!p) {
+    p = getJson<BlurbData>('gruppen.' + lang + '.json').catch(() => ({}) as BlurbData)
+    gruppenCache.set(lang, p)
   }
   return p
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadGameData, type GameData } from './data/load.ts'
+import { loadGameData, loadGruppen, type GameData } from './data/load.ts'
 import {
   ladeEinstellungen,
   speichereEinstellungen,
@@ -29,6 +29,7 @@ export function App() {
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
+  const [gruppen, setGruppen] = useState<Record<string, { text: string; url: string }>>({})
 
   useEffect(() => {
     loadGameData().then(setData, () => setFehler(true))
@@ -37,6 +38,17 @@ export function App() {
   useEffect(() => {
     speichereEinstellungen({ lang, tier, baumModus })
   }, [lang, tier, baumModus])
+
+  // Erklaerungen zu den Gruppen kommen nach, sobald die Sprache feststeht.
+  useEffect(() => {
+    let abgebrochen = false
+    loadGruppen(lang).then((g) => {
+      if (!abgebrochen) setGruppen(g)
+    })
+    return () => {
+      abgebrochen = true
+    }
+  }, [lang])
 
   /** Wählt ein Zieltier und startet eine Runde. */
   const starte = useCallback((d: GameData, m: Modus, stufe: TierId) => {
@@ -104,6 +116,7 @@ export function App() {
       lang={lang}
       modus={baumModus}
       animalOfNode={data.animalOfNode}
+      gruppen={gruppen}
     />
   )
 

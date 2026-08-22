@@ -31,8 +31,8 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
-            // Steckbriefe: erst bei Bedarf, danach dauerhaft.
-            urlPattern: /\/data\/blurbs\.[a-z]{2}\.json$/,
+            // Steckbriefe und Gruppenerklaerungen: erst bei Bedarf, danach dauerhaft.
+            urlPattern: /\/data\/(blurbs|gruppen)\.[a-z]{2}\.json$/,
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'artenmonster-blurbs' },
           },

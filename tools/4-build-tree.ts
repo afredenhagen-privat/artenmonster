@@ -18,6 +18,8 @@ import { CONFIG } from './config.ts'
 import { PATHS, ensureDirs, readJson, writeJson, readOverride } from './paths.ts'
 import { loadTree, loadNames, lineage, rankOf, type TaxNames } from './ncbi.ts'
 import { sparql, val } from './sparql.ts'
+import { fetchExtracts, type Summary } from './wikipedia.ts'
+import { progress } from './http.ts'
 import type { PoolAnimal } from './3-enrich.ts'
 
 export interface BuiltNode {
@@ -29,6 +31,9 @@ export interface BuiltNode {
   en: string
   /** Wissenschaftliche Namen der weggefalteten Zwischenstufen ueber diesem Knoten. */
   collapsed: string[]
+  /** Einleitungsabsatz zur Gruppe, damit man im Baum nachlesen kann, was sie ist. */
+  blurbDe?: Summary
+  blurbEn?: Summary
 }
 
 export interface BuiltTree {
@@ -43,21 +48,38 @@ interface CladeOverride {
   en?: string
 }
 
-/** Deutsche Namen fuer Taxa, gezielt ueber die NCBI-ID abgefragt. */
-async function fetchCladeNames(taxids: readonly number[]): Promise<Map<number, { de?: string; en?: string }>> {
-  const out = new Map<number, { de?: string; en?: string }>()
-  const BATCH = 300
+interface KladenInfo {
+  de?: string
+  en?: string
+  /** Titel des Wikipedia-Artikels, fuer den Einleitungsabsatz. */
+  titleDe?: string
+  titleEn?: string
+}
+
+/**
+ * Deutsche Namen und Wikipedia-Titel fuer Taxa, gezielt ueber die NCBI-ID
+ * abgefragt.
+ *
+ * Die Titel brauchen wir fuer die Erklaerung im Baum: "Was ist eigentlich
+ * Galloanserae?" soll man an Ort und Stelle nachlesen koennen, ohne die Seite
+ * zu verlassen.
+ */
+async function fetchCladeNames(taxids: readonly number[]): Promise<Map<number, KladenInfo>> {
+  const out = new Map<number, KladenInfo>()
+  const BATCH = 250
 
   for (let i = 0; i < taxids.length; i += BATCH) {
     const batch = taxids.slice(i, i + BATCH)
     const query = [
-      'SELECT ?ncbi ?nameDe ?nameEn ?labelDe ?labelEn WHERE {',
+      'SELECT ?ncbi ?nameDe ?nameEn ?labelDe ?labelEn ?deTitle ?enTitle WHERE {',
       '  VALUES ?ncbi { ' + batch.map((t) => '"' + t + '"').join(' ') + ' }',
       '  ?item wdt:P685 ?ncbi .',
       '  OPTIONAL { ?item wdt:P1843 ?nameDe . FILTER(LANG(?nameDe) = "de") }',
       '  OPTIONAL { ?item wdt:P1843 ?nameEn . FILTER(LANG(?nameEn) = "en") }',
       '  OPTIONAL { ?item rdfs:label ?labelDe . FILTER(LANG(?labelDe) = "de") }',
       '  OPTIONAL { ?item rdfs:label ?labelEn . FILTER(LANG(?labelEn) = "en") }',
+      '  OPTIONAL { ?a schema:about ?item ; schema:isPartOf <https://de.wikipedia.org/> ; schema:name ?deTitle }',
+      '  OPTIONAL { ?b schema:about ?item ; schema:isPartOf <https://en.wikipedia.org/> ; schema:name ?enTitle }',
       '}',
     ].join('\n')
 
@@ -70,6 +92,8 @@ async function fetchCladeNames(taxids: readonly number[]): Promise<Map<number, {
       // Der kuerzeste Trivialname passt am besten in eine Rueckmeldung.
       if (de && (!entry.de || de.length < entry.de.length)) entry.de = de
       if (en && (!entry.en || en.length < entry.en.length)) entry.en = en
+      entry.titleDe ??= val(row, 'deTitle')
+      entry.titleEn ??= val(row, 'enTitle')
       out.set(taxid, entry)
     }
     process.stderr.write('\r  Kladennamen: ' + Math.min(i + BATCH, taxids.length) + '/' + taxids.length + '   ')
@@ -218,6 +242,35 @@ async function main(): Promise<void> {
       collapsed: (collapsedNames.get(taxid) ?? []).map((t) => ncbiNames.get(t)?.scientific ?? String(t)),
     }
   })
+
+  // Einleitungsabsaetze zu den Gruppen. Nur fuer innere Knoten: Fuer die Tiere
+  // gibt es die Steckbriefe schon aus Schritt 3.
+  const titelDe: string[] = []
+  const titelEn: string[] = []
+  for (const taxid of internal) {
+    const info = wikidataNames.get(taxid)
+    if (info?.titleDe) titelDe.push(info.titleDe)
+    if (info?.titleEn) titelEn.push(info.titleEn)
+  }
+  console.log('  Erklaerungen zu den Gruppen holen (' + titelDe.length + ' deutsch, ' + titelEn.length + ' englisch) ...')
+  const gruppeDe = await fetchExtracts('de', titelDe, progress('Gruppen deutsch'))
+  const gruppeEn = await fetchExtracts('en', titelEn, progress('Gruppen englisch'))
+
+  for (const knoten of nodes) {
+    const info = wikidataNames.get(knoten.taxid)
+    if (!info) continue
+    const d = info.titleDe ? gruppeDe.get(info.titleDe) : undefined
+    if (d) knoten.blurbDe = d
+    const e = info.titleEn ? gruppeEn.get(info.titleEn) : undefined
+    if (e) knoten.blurbEn = e
+  }
+  console.log(
+    '  Gruppen mit Erklaerung: ' +
+      nodes.filter((n) => n.blurbDe).length +
+      ' deutsch, ' +
+      nodes.filter((n) => n.blurbEn).length +
+      ' englisch',
+  )
 
   const leafIndex: Record<string, number> = {}
   for (const p of pool) {

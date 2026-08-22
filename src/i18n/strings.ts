@@ -60,7 +60,10 @@ const STRINGS = {
     zuruecksetzen: 'Ansicht zurücksetzen',
     baumGruppe: 'Bis zur Gruppe',
     baumVoll: 'Vollständig',
-    baumModusHilfe: 'Bis zur Gruppe zeigt von jedem Tipp nur den Weg bis zur gemeinsamen Gruppe. Vollständig zeigt jede Ebene.',
+    baumModusHilfe: 'Bis zur Gruppe zeigt nur die gemeinsamen Gruppen. Vollständig zeigt jede Abstammungsebene.',
+    gruppe: 'Gruppe',
+    schliessen: 'Schließen',
+    gesuchtesTier: 'Hier steckt die Lösung',
 
     laedt: 'Lade Stammbaum ...',
     ladefehler: 'Die Spieldaten ließen sich nicht laden.',
@@ -128,7 +131,10 @@ const STRINGS = {
     zuruecksetzen: 'Reset view',
     baumGruppe: 'To the group',
     baumVoll: 'Every level',
-    baumModusHilfe: 'To the group shows each guess only as far as the shared group. Every level shows the full lineage.',
+    baumModusHilfe: 'To the group shows only the shared groups. Every level shows the full lineage.',
+    gruppe: 'Group',
+    schliessen: 'Close',
+    gesuchtesTier: 'The answer is in here',
 
     laedt: 'Loading the tree ...',
     ladefehler: 'Could not load the game data.',

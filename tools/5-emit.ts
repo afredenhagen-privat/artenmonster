@@ -97,6 +97,16 @@ async function main(): Promise<void> {
   })
   const searchData = { entries }
 
+  // --- Erklaerungen zu den Gruppen -----------------------------------------
+  // Nach Knotenindex, nicht nach Taxon-ID: Das Spiel arbeitet mit Indizes, und
+  // die Datei wird dadurch deutlich kleiner.
+  const gruppenDe: Record<string, { text: string; url: string }> = {}
+  const gruppenEn: Record<string, { text: string; url: string }> = {}
+  built.nodes.forEach((n, i) => {
+    if (n.blurbDe) gruppenDe[String(i)] = n.blurbDe
+    if (n.blurbEn) gruppenEn[String(i)] = n.blurbEn
+  })
+
   // --- blurbs --------------------------------------------------------------
   const blurbsDe: Record<string, { text: string; url: string }> = {}
   const blurbsEn: Record<string, { text: string; url: string }> = {}
@@ -166,6 +176,8 @@ async function main(): Promise<void> {
     ['search.json', searchData],
     ['blurbs.de.json', blurbsDe],
     ['blurbs.en.json', blurbsEn],
+    ['gruppen.de.json', gruppenDe],
+    ['gruppen.en.json', gruppenEn],
     ['meta.json', meta],
   ]
 
@@ -183,7 +195,7 @@ async function main(): Promise<void> {
   console.log('  ' + 'Summe'.padEnd(16) + ''.padStart(8) + mb(gesamtGz).padStart(12))
 
   const precacheGz = dateien
-    .filter(([n]) => !n.startsWith('blurbs'))
+    .filter(([n]) => !n.startsWith('blurbs') && !n.startsWith('gruppen'))
     .reduce((sum, [, d]) => sum + gzipSize(d), 0)
   console.log('  davon fest im Precache des Service Workers: ' + mb(precacheGz))
 
@@ -194,6 +206,15 @@ async function main(): Promise<void> {
   }
   console.log('  Suchbegriffe: ' + entries.length)
   console.log('  Steckbriefe deutsch: ' + Object.keys(blurbsDe).length + ', englisch: ' + Object.keys(blurbsEn).length)
+  console.log(
+    '  Gruppenerklaerungen deutsch: ' +
+      Object.keys(gruppenDe).length +
+      ', englisch: ' +
+      Object.keys(gruppenEn).length +
+      ' von ' +
+      nodes.length +
+      ' Knoten',
+  )
   console.log('Schritt 5 fertig.')
 }
 
