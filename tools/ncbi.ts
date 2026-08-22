@@ -14,6 +14,7 @@ import { PATHS } from './paths.ts'
 
 export const NODES_FILE = path.join(PATHS.raw, 'nodes.dmp')
 export const NAMES_FILE = path.join(PATHS.raw, 'names.dmp')
+export const MERGED_FILE = path.join(PATHS.raw, 'merged.dmp')
 
 export interface TaxTree {
   /** parent[taxid] = Eltern-Taxon-ID. 0 heisst: Taxon existiert nicht. */
@@ -131,6 +132,31 @@ export async function loadNames(wanted?: Set<number>): Promise<Map<number, TaxNa
     }
   }
 
+  return out
+}
+
+/**
+ * Zusammengelegte Taxon-IDs: alte ID auf die heute gueltige.
+ *
+ * NCBI legt Taxa zusammen, wenn sich die Systematik aendert, und die alte ID
+ * verschwindet aus nodes.dmp. Wikidata fuehrt sie oft weiter — der Buntspecht
+ * traegt dort 137523, gueltig ist heute 183177. Ohne diese Tabelle laeuft der
+ * Join fuer solche Tiere ins Leere.
+ */
+export async function loadMerged(): Promise<Map<number, number>> {
+  const out = new Map<number, number>()
+  if (!fs.existsSync(MERGED_FILE)) return out
+  const rl = readline.createInterface({
+    input: fs.createReadStream(MERGED_FILE, { encoding: 'utf8' }),
+    crlfDelay: Infinity,
+  })
+  for await (const line of rl) {
+    if (!line) continue
+    const f = splitDmp(line)
+    const alt = Number(f[0])
+    const neu = Number(f[1])
+    if (Number.isFinite(alt) && Number.isFinite(neu)) out.set(alt, neu)
+  }
   return out
 }
 

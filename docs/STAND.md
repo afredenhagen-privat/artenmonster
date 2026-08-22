@@ -47,7 +47,11 @@ bliebe die deutsche Regel nicht bestehen: Ein Spiel, in dem man *Carabus auronit
 macht keinen Spaß.
 
 **Kein spielbares Tier darf über einem anderen liegen** — sonst wäre ein Tipp gleichzeitig Lösung
-und Gruppe. Die Regel räumt sinnvoll vier Tiger-Unterarten und den Grizzly weg. Ausgenommen sind die
+und Gruppe. Bei einem Konflikt gewinnt die Art, nicht die bekanntere von beiden: Das Quagga hat als
+ausgestorbene Unterart mehr Abrufe als das Steppenzebra, dessen Unterart es ist, und verdrängte damit
+ausgerechnet das gewöhnliche Zebra. Wer „Zebra" eingibt, meint die Art. Von 4.000 Tieren bleiben so
+18 Unterarten übrig, alle ohne konkurrierende Art im Pool. Die Regel räumt auch die Tiger-Unterarten
+und den Grizzly weg. Ausgenommen sind die
 Haustiere in `tools/overrides/animals.json`, denn dort ist die Verschachtelung gerade der Reiz: Der
 Hund ist eine Unterart des Wolfs. Für diesen Fall meldet das Spiel „Dein Tipp ist eine Unterart der
 Lösung" statt eines unverständlichen „noch 0 Verzweigungen".
@@ -90,17 +94,23 @@ statt einem falschen, und beim nächsten Aufruf ist er ohnehin nachgezogen. Alle
 Precache liegt und einen Neubau überdauern kann, braucht einen Schlüssel, der den Neubau ebenfalls
 überdauert.
 
-**Der Join über die NCBI-Taxon-ID verliert bekannte Tiere, und zwar auf zwei Wegen.** Aufgefallen
-ist es, weil die Eingabe „Zebra" kein Zebra brachte: Das Steppenzebra war gar nicht im Spiel. Beim
+**Der Join über die NCBI-Taxon-ID verlor bekannte Tiere, und zwar auf zwei Wegen.** Aufgefallen ist
+es, weil die Eingabe „Zebra" kein Zebra brachte: Das Steppenzebra war gar nicht im Spiel. Beim
 Wikidata-Item fehlt die Eigenschaft P685 — derselbe Fall wie beim Haushund. Beim Buntspecht dagegen
 ist sie vorhanden, zeigt aber auf Taxon 137523, das NCBI inzwischen mit 183177 verschmolzen hat.
-Beide Male läuft der Join ins Leere und das Tier existiert für das Spiel nicht.
+Beide Male lief der Join ins Leere und das Tier existierte für das Spiel nicht. Betroffen waren unter
+anderem Pottwal (209.000 Abrufe im Jahr), Buntspecht (161.000) und Habicht (102.000) — keine
+Randfiguren.
 
-Betroffen waren unter anderem Pottwal (209.000 Abrufe im Jahr), Buntspecht (161.000) und Habicht
-(102.000) — keine Randfiguren. `npx tsx tools/luecken-check.ts` findet solche Lücken systematisch:
-Ausgangspunkt sind die Taxobox-Artikel der deutschen Wikipedia, wer dort steht und nicht unter den
-Kandidaten, wird über den wissenschaftlichen Namen im lokalen NCBI-Index nachgeschlagen und nach
-Abrufzahlen sortiert. Das Werkzeug gehört nach jedem Datenlauf einmal aufgerufen.
+Schritt 2 repariert das jetzt selbst, statt es auf Handeinträge abzuwälzen: `merged.dmp` aus dem
+Taxdump sagt, wohin eine zusammengelegte ID gewandert ist, und der wissenschaftliche Name ist
+ohnehin die eigentliche Verbindung zwischen Wikidata und NCBI. Auf Tiere gefiltert wird erst danach,
+ein Fehlgriff auf eine gleichnamige Pflanze fällt also von selbst heraus.
+
+`npx tsx tools/luecken-check.ts` prüft nach, was trotzdem fehlt: Ausgangspunkt sind die
+Taxobox-Artikel der deutschen Wikipedia, wer dort steht und nicht unter den Kandidaten, wird über
+den Namen nachgeschlagen und nach Abrufzahlen sortiert. Das Werkzeug gehört nach jedem Datenlauf
+einmal aufgerufen.
 
 **In SVG überschreibt eine CSS-`transform`-Eigenschaft das `transform`-Attribut.** Die
 Einblend-Animation der Tierknoten hat sie gesetzt, worauf jeder Knoten auf den Nullpunkt zurückfiel

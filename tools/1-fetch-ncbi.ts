@@ -1,7 +1,7 @@
 /**
  * Schritt 1: NCBI-Taxonomie holen.
  *
- * Laedt taxdump.tar.gz (~65 MB), entpackt nodes.dmp und names.dmp nach data/raw/
+ * Laedt taxdump.tar.gz (~65 MB), entpackt nodes.dmp, names.dmp und merged.dmp nach data/raw/
  * und prueft danach kurz, ob der Baum plausibel aussieht.
  *
  * Quelle: https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/
@@ -41,12 +41,12 @@ async function download(): Promise<void> {
 }
 
 async function extract(): Promise<void> {
-  const needed = ['nodes.dmp', 'names.dmp']
+  const needed = ['nodes.dmp', 'names.dmp', 'merged.dmp']
   if (needed.every((f) => fs.existsSync(path.join(PATHS.raw, f)))) {
-    console.log('  nodes.dmp und names.dmp sind schon entpackt.')
+    console.log('  nodes.dmp, names.dmp und merged.dmp sind schon entpackt.')
     return
   }
-  console.log('  Entpacke nodes.dmp und names.dmp ...')
+  console.log('  Entpacke nodes.dmp, names.dmp und merged.dmp ...')
   await tar.x({
     file: ARCHIVE,
     cwd: PATHS.raw,

@@ -19,7 +19,7 @@ import path from 'node:path'
 import { sparql, val, qid, type SparqlBinding } from './sparql.ts'
 import { CONFIG } from './config.ts'
 import { PATHS, ensureDirs, writeJson, readOverride } from './paths.ts'
-import { loadTree, isDescendantOf, rankOf, type TaxTree } from './ncbi.ts'
+import { loadTree, loadMerged, loadScientificIndex, isDescendantOf, rankOf, type TaxTree } from './ncbi.ts'
 import { harvestTaxoboxPages } from './wikipedia.ts'
 
 export interface Candidate {
@@ -73,10 +73,14 @@ function mergeRows(rows: SparqlBinding[], titles: Map<string, string>): Map<stri
   for (const row of rows) {
     const q = qid(val(row, 'item'))
     if (!q) continue
-    const taxidRaw = val(row, 'ncbi')
-    if (!taxidRaw) continue
-    const taxid = Number(taxidRaw)
-    if (!Number.isFinite(taxid) || taxid <= 0) continue
+
+    /*
+     * Ein Item ohne NCBI-Taxon-ID wird nicht mehr weggeworfen, sondern mit
+     * taxid 0 aufgenommen. Die Zuordnung ueber den wissenschaftlichen Namen
+     * holt sie unten nach.
+     */
+    const taxidRoh = Number(val(row, 'ncbi') ?? 0)
+    const taxid = Number.isFinite(taxidRoh) && taxidRoh > 0 ? taxidRoh : 0
 
     let c = byQid.get(q)
     if (!c) {
@@ -88,6 +92,7 @@ function mergeRows(rows: SparqlBinding[], titles: Map<string, string>): Map<stri
       }
       byQid.set(q, c)
     }
+    if (c.taxid === 0 && taxid > 0) c.taxid = taxid
 
     c.sci ??= val(row, 'sci')
     c.labelDe ??= val(row, 'labelDe')
@@ -108,14 +113,64 @@ function mergeRows(rows: SparqlBinding[], titles: Map<string, string>): Map<stri
   return byQid
 }
 
+/**
+ * Holt fehlende und veraltete Taxon-IDs nach.
+ *
+ * Der Join haengt an Wikidatas P685, und der faellt auf zwei Weisen aus. Beim
+ * Pottwal, Habicht und Steppenzebra fehlt die Eigenschaft ganz — dieselbe
+ * Luecke wie beim Haushund. Beim Buntspecht und beim Marabu ist sie da, zeigt
+ * aber auf eine Taxon-ID, die NCBI zusammengelegt hat.
+ *
+ * Beides ist behebbar, ohne jemanden zu fragen: merged.dmp sagt, wohin eine
+ * alte ID gewandert ist, und der wissenschaftliche Name ist die eigentliche
+ * Verbindung zwischen beiden Datenbanken. Erst danach wird auf Tiere gefiltert,
+ * ein Fehlgriff auf eine gleichnamige Pflanze faellt also ohnehin heraus.
+ */
+async function repariereTaxids(
+  candidates: Map<string, Candidate>,
+  tree: TaxTree,
+): Promise<{ verschoben: number; ueberNamen: number; offen: number }> {
+  const gueltig = (t: number): boolean => t > 0 && t < tree.parent.length && tree.parent[t] !== 0
+
+  const kaputt = [...candidates.values()].filter((c) => !gueltig(c.taxid))
+  if (kaputt.length === 0) return { verschoben: 0, ueberNamen: 0, offen: 0 }
+
+  const merged = await loadMerged()
+  let verschoben = 0
+  for (const c of kaputt) {
+    if (c.taxid <= 0) continue
+    const neu = merged.get(c.taxid)
+    if (neu !== undefined && gueltig(neu)) {
+      c.taxid = neu
+      verschoben++
+    }
+  }
+
+  const nochOffen = kaputt.filter((c) => !gueltig(c.taxid) && c.sci)
+  let ueberNamen = 0
+  if (nochOffen.length > 0) {
+    const namensIndex = await loadScientificIndex()
+    for (const c of nochOffen) {
+      const t = namensIndex.get(c.sci!.toLowerCase())
+      if (t !== undefined && gueltig(t)) {
+        c.taxid = t
+        ueberNamen++
+      }
+    }
+  }
+
+  const offen = [...candidates.values()].filter((c) => !gueltig(c.taxid)).length
+  return { verschoben, ueberNamen, offen }
+}
+
 function filterToAnimals(candidates: Map<string, Candidate>, tree: TaxTree) {
   const kept: Candidate[] = []
   const stats = { unbekannteTaxid: 0, keinTier: 0, blockiert: 0, zuUnbekannt: 0, behalten: 0 }
   const blocklist = new Set(readOverride<{ taxids: number[] }>('blocklist.json', { taxids: [] }).taxids)
 
   for (const c of candidates.values()) {
-    if (c.taxid >= tree.parent.length || tree.parent[c.taxid] === 0) {
-      // NCBI kennt die Taxon-ID nicht mehr, weil sie zurueckgezogen oder zusammengelegt wurde.
+    if (c.taxid <= 0 || c.taxid >= tree.parent.length || tree.parent[c.taxid] === 0) {
+      // Weder ueber P685 noch ueber merged.dmp noch ueber den Namen zuzuordnen.
       stats.unbekannteTaxid++
       continue
     }
@@ -163,10 +218,17 @@ async function main(): Promise<void> {
   process.stderr.write('\n')
 
   const merged = mergeRows(rows, titles)
-  console.log('      ' + merged.size + ' Items mit NCBI-Taxon-ID')
+  const mitId = [...merged.values()].filter((c) => c.taxid > 0).length
+  console.log('      ' + merged.size + ' Items, davon ' + mitId + ' mit NCBI-Taxon-ID in Wikidata')
 
-  console.log('  2c) Auf Tiere filtern ...')
+  console.log('  2c) Fehlende und veraltete Taxon-IDs nachholen ...')
   const tree = await loadTree()
+  const repariert = await repariereTaxids(merged, tree)
+  console.log('      ueber merged.dmp verschoben:          ' + repariert.verschoben)
+  console.log('      ueber den wissenschaftlichen Namen:   ' + repariert.ueberNamen)
+  console.log('      weiterhin ohne Zuordnung:             ' + repariert.offen)
+
+  console.log('  2d) Auf Tiere filtern ...')
   const { kept, stats } = filterToAnimals(merged, tree)
   console.log('      NCBI kennt Taxon-ID nicht:            ' + stats.unbekannteTaxid)
   console.log('      kein Tier (Pflanze, Pilz, Bakterium): ' + stats.keinTier)

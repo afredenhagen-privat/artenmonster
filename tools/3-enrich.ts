@@ -31,6 +31,8 @@ export interface PoolAnimal {
   sitelinks: number
   /** true, wenn der Wert aus den Sprachversionen geschaetzt wurde. */
   geschaetzt?: boolean
+  /** Rang laut NCBI, "species" oder "subspecies". */
+  rang: string
   tier: TierId
   titleDe: string
   titleEn?: string
@@ -254,6 +256,7 @@ async function buildPool(
     byTaxid.set(c.taxid, {
       taxid: c.taxid,
       qid: c.qid,
+      rang,
       sci: c.sci ?? '',
       nameDe,
       nameEn,
@@ -272,6 +275,24 @@ async function buildPool(
 
   const nachBekanntheit = [...byTaxid.values()].sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
 
+  /*
+   * Fuer die Verschachtelungspruefung kommen Arten vor Unterarten, innerhalb
+   * beider Gruppen weiterhin nach Bekanntheit.
+   *
+   * Sonst entscheidet bei einem Konflikt allein die Bekanntheit, und die zeigt
+   * gelegentlich in die falsche Richtung: Das Quagga hat als ausgestorbene
+   * Unterart mehr Abrufe als das Steppenzebra, dessen Unterart es ist — und
+   * verdraengte damit ausgerechnet das gewoehnliche Zebra aus dem Spiel. Wer
+   * "Zebra" eingibt, meint die Art, nicht den Sonderfall. Dieselbe Regel raeumt
+   * die Tiger-Unterarten weg, dort stimmte die Bekanntheit nur zufaellig schon.
+   *
+   * Array.prototype.sort ist stabil, die Reihenfolge nach Bekanntheit bleibt
+   * innerhalb der beiden Gruppen also erhalten.
+   */
+  const zurPruefung = [...nachBekanntheit].sort(
+    (a, b) => (a.rang === 'subspecies' ? 1 : 0) - (b.rang === 'subspecies' ? 1 : 0),
+  )
+
 
   /*
    * Kein spielbares Tier darf oberhalb eines anderen liegen. Sonst waere ein
@@ -289,7 +310,7 @@ async function buildPool(
   const behalten = new Set<number>()
   const vorfahrenBehaltener = new Set<number>()
 
-  for (const kandidat of nachBekanntheit) {
+  for (const kandidat of zurPruefung) {
     if (overrides.get(kandidat.taxid)?.allowNested) {
       // Ausdruecklich erlaubte Verschachtelung, etwa Hund unter Wolf. Dieses Tier
       // wird weder geprueft noch sperrt es andere. Das Spiel meldet den Fall
@@ -323,6 +344,9 @@ async function buildPool(
     for (const v of vorfahren) vorfahrenBehaltener.add(v)
     pool.push(kandidat)
   }
+
+  // Die Pruefung lief nach Rang, die Auswahl laeuft wieder nach Bekanntheit.
+  pool.sort((a, b) => b.score - a.score || a.sci.localeCompare(b.sci))
 
   // Auswahl nach Quote statt reiner Bekanntheit, damit nicht alles Vogel wird.
   const grenzen = [CONFIG.TIERS[1].size, CONFIG.TIERS[1].size + CONFIG.TIERS[2].size]
