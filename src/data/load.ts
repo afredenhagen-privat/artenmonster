@@ -23,7 +23,15 @@ export interface AnimalEntry {
   node: number
   score: number
   tier: TierId
+  /** Index der Grossgruppe in GameData.kategorien, -1 wenn in keiner. */
+  kat: number
   image?: ImageInfo
+}
+
+/** Eine wählbare Grossgruppe, etwa Vögel oder Insekten. */
+export interface Kategorie {
+  de: string
+  en: string
 }
 
 export interface GameData {
@@ -32,6 +40,7 @@ export interface GameData {
   hidden: Record<string, string[]>
   animals: AnimalEntry[]
   tierRanges: Record<string, { from: number; to: number }>
+  kategorien: Kategorie[]
   thumbPrefix: string
   search: SearchIndex
   /** Baumknoten zurueck auf den Tierindex. */
@@ -63,6 +72,7 @@ export function loadGameData(): Promise<GameData> {
       getJson<{
         animals: AnimalEntry[]
         tierRanges: Record<string, { from: number; to: number }>
+        kategorien?: Kategorie[]
         thumbPrefix: string
       }>('animals.json'),
       getJson<{ entries: [string, number][] }>('search.json'),
@@ -78,6 +88,7 @@ export function loadGameData(): Promise<GameData> {
       hidden: treeRaw.hidden ?? {},
       animals: animalsRaw.animals,
       tierRanges: animalsRaw.tierRanges,
+      kategorien: animalsRaw.kategorien ?? [],
       thumbPrefix: animalsRaw.thumbPrefix,
       search: new SearchIndex({ entries: searchRaw.entries }),
       animalOfNode,

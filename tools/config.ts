@@ -40,25 +40,25 @@ export const CONFIG = {
    * hier ist die Reihenfolge der Zuteilung.
    */
   GRUPPEN: [
-    { taxid: 8782, name: 'Vögel', ziel: 1000 },
-    { taxid: 40674, name: 'Säugetiere', ziel: 800 },
-    { taxid: 50557, name: 'Insekten', ziel: 700 },
-    { taxid: 7898, name: 'Strahlenflosser', ziel: 350 },
-    { taxid: 8504, name: 'Schuppenkriechtiere', ziel: 200 },
-    { taxid: 6854, name: 'Spinnentiere', ziel: 130 },
-    { taxid: 8292, name: 'Amphibien', ziel: 120 },
-    { taxid: 7777, name: 'Knorpelfische', ziel: 120 },
-    { taxid: 6447, name: 'Weichtiere', ziel: 70 },
-    { taxid: 8459, name: 'Schildkröten', ziel: 60 },
+    { taxid: 8782, name: 'Vögel', en: 'Birds', ziel: 1000 },
+    { taxid: 40674, name: 'Säugetiere', en: 'Mammals', ziel: 800 },
+    { taxid: 50557, name: 'Insekten', en: 'Insects', ziel: 700 },
+    { taxid: 7898, name: 'Strahlenflosser', en: 'Ray-finned fishes', ziel: 350 },
+    { taxid: 8504, name: 'Schuppenkriechtiere', en: 'Lizards and snakes', ziel: 200 },
+    { taxid: 6854, name: 'Spinnentiere', en: 'Arachnids', ziel: 130 },
+    { taxid: 8292, name: 'Amphibien', en: 'Amphibians', ziel: 120 },
+    { taxid: 7777, name: 'Knorpelfische', en: 'Sharks and rays', ziel: 120 },
+    { taxid: 6447, name: 'Weichtiere', en: 'Molluscs', ziel: 70 },
+    { taxid: 8459, name: 'Schildkröten', en: 'Turtles', ziel: 60 },
     // 6657 (Crustacea) fuehrt NCBI nicht mehr als Gruppe, es gilt als
     // paraphyletisch. Die Hoeheren Krebse mit Krabben, Hummern und Asseln
     // sitzen unter Malacostraca.
-    { taxid: 6681, name: 'Höhere Krebse', ziel: 50 },
-    { taxid: 6073, name: 'Nesseltiere', ziel: 30 },
-    { taxid: 7586, name: 'Stachelhäuter', ziel: 25 },
-    { taxid: 6340, name: 'Ringelwürmer', ziel: 15 },
-    { taxid: 1294634, name: 'Krokodile', ziel: 25 },
-  ] as ReadonlyArray<{ taxid: number; name: string; ziel: number }>,
+    { taxid: 6681, name: 'Höhere Krebse', en: 'Crustaceans', ziel: 50 },
+    { taxid: 6073, name: 'Nesseltiere', en: 'Cnidarians', ziel: 30 },
+    { taxid: 7586, name: 'Stachelhäuter', en: 'Echinoderms', ziel: 25 },
+    { taxid: 6340, name: 'Ringelwürmer', en: 'Segmented worms', ziel: 15 },
+    { taxid: 1294634, name: 'Krokodile', en: 'Crocodilians', ziel: 25 },
+  ] as ReadonlyArray<{ taxid: number; name: string; en: string; ziel: number }>,
 
   /** Maximale Laenge eines Steckbriefs in Zeichen. */
   BLURB_MAX_CHARS: 350,

@@ -26,6 +26,13 @@ const STRINGS = {
     ohneLimit: '∞',
     versucheHinweis: 'Eine andere Zahl startet eine neue Runde. ∞ heißt ohne Limit.',
 
+    kategorien: 'Gruppen',
+    kategorienAlle: 'Alle',
+    kategorienUmkehren: 'Umkehren',
+    kategorienHinweis: 'Bestimmt, woraus das gesuchte Tier kommt. Raten darfst du weiter alles.',
+    kategorienLeer: 'In dieser Stufe gibt es kein Tier aus den gewählten Gruppen.',
+    kategorienTag: 'Das Tagesrätsel nimmt immer alle Gruppen, sonst wäre es nicht für alle dasselbe.',
+
     eingabe: 'Tier eingeben ...',
     raten: 'Raten',
     versuche: 'Versuch {n} von {max}',
@@ -109,6 +116,13 @@ const STRINGS = {
     versucheFeld: 'Guesses',
     ohneLimit: '∞',
     versucheHinweis: 'Changing the number starts a new round. ∞ means no limit.',
+
+    kategorien: 'Groups',
+    kategorienAlle: 'All',
+    kategorienUmkehren: 'Invert',
+    kategorienHinweis: 'Sets where the mystery animal comes from. You can still guess anything.',
+    kategorienLeer: 'No animal in this level belongs to the selected groups.',
+    kategorienTag: 'The daily always uses every group — otherwise it would not be the same for everyone.',
 
     eingabe: 'Enter an animal ...',
     raten: 'Guess',

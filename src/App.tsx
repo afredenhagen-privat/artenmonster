@@ -28,6 +28,38 @@ import { Vollbild } from './ui/Vollbild.tsx'
 
 type Modus = 'tag' | 'endlos' | 'zen'
 
+/** Feste leere Auswahl. Als Konstante, damit sie keinen Effekt neu auslöst. */
+const LEER: number[] = []
+
+/**
+ * Die Tiere einer Stufe, eingeschränkt auf die gewählten Grossgruppen.
+ *
+ * Eine leere Auswahl heißt "alle" — inklusive der Tiere ohne Grossgruppe, etwa
+ * der Schwämme. Bliebe nach dem Filtern nichts übrig, gilt wieder die ganze
+ * Stufe: Lieber ein Tier aus einer anderen Gruppe als eine Runde, die gar nicht
+ * erst anfängt. Die Oberfläche verhindert diesen Fall ohnehin, indem sie leere
+ * Gruppen nicht anbietet.
+ */
+function waehlbareTiere(d: GameData, stufe: TierId, gruppen: number[]): number[] {
+  const bereich = d.tierRanges[String(stufe)]
+  const alle: number[] = []
+  for (let i = bereich.from; i < bereich.to; i++) alle.push(i)
+  if (gruppen.length === 0) return alle
+  const erlaubt = alle.filter((i) => gruppen.includes(d.animals[i].kat))
+  return erlaubt.length > 0 ? erlaubt : alle
+}
+
+/** Wie viele Tiere je Grossgruppe stehen in dieser Stufe? */
+function zaehleKategorien(d: GameData, stufe: TierId): number[] {
+  const zahlen = new Array<number>(d.kategorien.length).fill(0)
+  const bereich = d.tierRanges[String(stufe)]
+  for (let i = bereich.from; i < bereich.to; i++) {
+    const k = d.animals[i].kat
+    if (k >= 0 && k < zahlen.length) zahlen[k]++
+  }
+  return zahlen
+}
+
 export function App() {
   const [data, setData] = useState<GameData | null>(null)
   const [fehler, setFehler] = useState(false)
@@ -38,6 +70,7 @@ export function App() {
   const [baumModus, setBaumModus] = useState<BaumModus>(anfang.baumModus)
   const [thema, setThema] = useState<Thema>(anfang.thema)
   const [maxGuesses, setMaxGuesses] = useState<number>(anfang.maxGuesses)
+  const [kategorien, setKategorien] = useState<number[]>(anfang.kategorien)
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
@@ -49,8 +82,8 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    speichereEinstellungen({ lang, tier, baumModus, thema, maxGuesses })
-  }, [lang, tier, baumModus, thema, maxGuesses])
+    speichereEinstellungen({ lang, tier, baumModus, thema, maxGuesses, kategorien })
+  }, [lang, tier, baumModus, thema, maxGuesses, kategorien])
 
   /*
    * Die Farbwahl haengt am Wurzelelement, damit sie ohne Ausnahme fuer alles
@@ -83,26 +116,40 @@ export function App() {
     }
   }, [data, lang])
 
-  /** Wählt ein Zieltier und startet eine Runde. */
-  const starte = useCallback((d: GameData, m: Modus, stufe: TierId, versuche: number) => {
-    const bereich = d.tierRanges[String(stufe)]
-    const groesse = bereich.to - bereich.from
-    if (groesse <= 0) return
+  /**
+   * Wählt ein Zieltier und startet eine Runde.
+   *
+   * `gruppen` schränkt ein, woraus das Ziel kommen darf. Eine leere Liste heißt
+   * "alle" — dann bleibt auch das Tier ohne Grossgruppe im Topf, etwa der
+   * Badeschwamm. Das Tagesrätsel bekommt immer eine leere Liste: Es soll für
+   * alle dasselbe sein, und das wäre es mit einem persönlichen Filter nicht.
+   */
+  const starte = useCallback(
+    (d: GameData, m: Modus, stufe: TierId, versuche: number, gruppen: number[]) => {
+      const auswahl = waehlbareTiere(d, stufe, gruppen)
+      if (auswahl.length === 0) {
+        setState(null)
+        return
+      }
 
-    const index =
-      m === 'tag'
-        ? bereich.from + dailyIndex(dayKey(), groesse, 'stufe' + stufe)
-        : bereich.from + Math.floor(Math.random() * groesse)
+      const index =
+        m === 'tag'
+          ? auswahl[dailyIndex(dayKey(), auswahl.length, 'stufe' + stufe)]
+          : auswahl[Math.floor(Math.random() * auswahl.length)]
 
-    setState(createGame(index, d.animals[index].node, { zen: m === 'zen', maxGuesses: versuche }))
-  }, [])
+      setState(createGame(index, d.animals[index].node, { zen: m === 'zen', maxGuesses: versuche }))
+    },
+    [],
+  )
 
   // Eine andere Versuchszahl mitten in der Runde waere mehrdeutig: Wer schon
   // fuenfundzwanzig Mal geraten hat und auf zehn stellt, haette rueckwirkend
   // verloren. Es beginnt deshalb eine neue Runde, wie bei der Stufe auch.
+  // Im Tagesrätsel gilt der Gruppenfilter nicht, deshalb die leere Liste.
+  const zielGruppen = modus === 'tag' ? LEER : kategorien
   useEffect(() => {
-    if (data) starte(data, modus, tier, maxGuesses)
-  }, [data, modus, tier, maxGuesses, starte])
+    if (data) starte(data, modus, tier, maxGuesses, zielGruppen)
+  }, [data, modus, tier, maxGuesses, zielGruppen, starte])
 
   // Tagesergebnis festhalten, damit es nach dem Neuladen erhalten bleibt.
   useEffect(() => {
@@ -148,6 +195,7 @@ export function App() {
   const ohneLimit = !Number.isFinite(state.maxGuesses)
   const uebrig = ohneLimit ? null : state.maxGuesses - state.guesses.length
   const letzterTipp = state.guesses.at(-1)
+  const kategorieZahlen = zaehleKategorien(data, tier)
 
   const eingabe = (
     <GuessInput
@@ -233,6 +281,80 @@ export function App() {
           Im Zen-Modus gibt es grundsätzlich kein Limit. Die Auswahl dort
           anzubieten hieße, eine Einstellung zu zeigen, die nichts bewirkt.
         */}
+        {/*
+          Die Gruppenauswahl fehlt im Tagesrätsel mit Absicht: Dort soll für alle
+          dasselbe Tier gesucht sein, und ein persönlicher Filter wäre genau das
+          nicht. Die Zeile darunter sagt das, statt die Auswahl kommentarlos
+          verschwinden zu lassen.
+        */}
+        <div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="etikett">{t(lang, 'kategorien')}</span>
+            {modus !== 'tag' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setKategorien(LEER)}
+                  aria-pressed={kategorien.length === 0}
+                  className={
+                    'border px-2 py-1 font-etikett text-[10px] uppercase tracking-etikett transition ' +
+                    (kategorien.length === 0
+                      ? 'border-nah bg-nah/15 text-nah'
+                      : 'border-linie text-flechte hover:border-flechte hover:text-knochen')
+                  }
+                >
+                  {t(lang, 'kategorienAlle')}
+                </button>
+                {/*
+                  Ein Klick wählt eine Gruppe allein aus. Zum Ausschließen einer
+                  einzigen wären das sonst vierzehn Klicks: erst die Gruppe, dann
+                  umkehren.
+                */}
+                <button
+                  type="button"
+                  disabled={kategorien.length === 0}
+                  onClick={() => setKategorien((jetzt) => umkehren(jetzt, data, tier))}
+                  className="border border-linie px-2 py-1 font-etikett text-[10px] uppercase tracking-etikett text-flechte transition enabled:hover:border-flechte enabled:hover:text-knochen disabled:opacity-25"
+                >
+                  {t(lang, 'kategorienUmkehren')}
+                </button>
+              </>
+            )}
+          </div>
+
+          {modus === 'tag' ? (
+            <p className="mt-2 text-[12px] leading-snug text-flechte">{t(lang, 'kategorienTag')}</p>
+          ) : (
+            <>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {data.kategorien.map((k, i) => {
+                  const anzahl = kategorieZahlen[i]
+                  const gewaehlt = kategorien.length === 0 || kategorien.includes(i)
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={anzahl === 0}
+                      aria-pressed={gewaehlt}
+                      onClick={() => setKategorien((jetzt) => umschalten(jetzt, i, data, tier))}
+                      className={
+                        'border px-2 py-1 text-left font-etikett text-[10px] uppercase tracking-etikett transition disabled:opacity-25 ' +
+                        (gewaehlt && kategorien.length > 0
+                          ? 'border-nah bg-nah/15 text-nah'
+                          : 'border-linie text-flechte enabled:hover:border-flechte enabled:hover:text-knochen')
+                      }
+                    >
+                      {lang === 'de' ? k.de : k.en}
+                      <span className="ml-1.5 tabular-nums opacity-60">{anzahl}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-[12px] leading-snug text-flechte">{t(lang, 'kategorienHinweis')}</p>
+            </>
+          )}
+        </div>
+
         {modus !== 'zen' && (
           <div>
             <div className="flex items-center gap-3">
@@ -287,7 +409,7 @@ export function App() {
             lang={lang}
             tier={tier}
             puzzle={modus === 'tag' ? puzzleNumber(dayKey()) : undefined}
-            onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses)}
+            onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses, kategorien)}
           />
         )}
 
@@ -371,7 +493,7 @@ export function App() {
                 lang={lang}
                 tier={tier}
                 puzzle={modus === 'tag' ? puzzleNumber(dayKey()) : undefined}
-                onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses)}
+                onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses, kategorien)}
               />
             ) : (
               <div className="space-y-2">
@@ -509,6 +631,40 @@ function Vorrat({ uebrig, gesamt }: { uebrig: number; gesamt: number }) {
       ))}
     </span>
   )
+}
+
+/**
+ * Schaltet eine Grossgruppe an oder aus.
+ *
+ * Eine leere Auswahl bedeutet "alle", deshalb wird beim ersten Klick nicht eine
+ * Gruppe an-, sondern alle anderen abgewählt: Wer auf "Vögel" tippt, will Vögel
+ * spielen und nicht Vögel zu einer Auswahl hinzufügen, die ohnehin schon alles
+ * enthält. Die letzte verbleibende Gruppe lässt sich nicht abwählen — sonst
+ * stünde da eine Auswahl, die wieder alles bedeutet, obwohl gerade das Gegenteil
+ * gemeint war.
+ */
+function umschalten(jetzt: number[], index: number, d: GameData, stufe: TierId): number[] {
+  if (jetzt.length === 0) return [index]
+  if (!jetzt.includes(index)) return [...jetzt, index].sort((a, b) => a - b)
+  const rest = jetzt.filter((i) => i !== index)
+  const zahlen = zaehleKategorien(d, stufe)
+  return rest.some((i) => zahlen[i] > 0) ? rest : jetzt
+}
+
+/**
+ * Kehrt die Auswahl um: aus "nur Vögel" wird "alles außer Vögeln".
+ *
+ * Gruppen ohne Tiere in dieser Stufe bleiben draußen, sie wären nur eine
+ * Auswahl ohne Wirkung. Waren alle gewählt, bliebe nichts übrig — dann bleibt
+ * es, wie es ist.
+ */
+function umkehren(jetzt: number[], d: GameData, stufe: TierId): number[] {
+  if (jetzt.length === 0) return jetzt
+  const zahlen = zaehleKategorien(d, stufe)
+  const rest = d.kategorien
+    .map((_, i) => i)
+    .filter((i) => !jetzt.includes(i) && zahlen[i] > 0)
+  return rest.length > 0 ? rest : jetzt
 }
 
 /** System, hell, dunkel und wieder von vorn. */

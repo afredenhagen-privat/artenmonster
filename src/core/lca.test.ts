@@ -24,8 +24,9 @@ beschreibe('Erzeugte Spieldaten', () => {
     hidden: Record<string, string[]>
   }
   const animalsRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'animals.json'), 'utf8')) as {
-    animals: Array<{ node: number; tier: number; image?: { author: string; license: string } }>
+    animals: Array<{ node: number; tier: number; kat: number; image?: { author: string; license: string } }>
     tierRanges: Record<string, { from: number; to: number }>
+    kategorien: Array<{ de: string; en: string }>
   }
   const searchRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'search.json'), 'utf8')) as {
     entries: [string, number][]
@@ -45,11 +46,16 @@ beschreibe('Erzeugte Spieldaten', () => {
   const index = new SearchIndex(searchRaw)
   const animals = animalsRaw.animals
 
-  /** Baumknoten zu einem deutschen Tiernamen, ueber den echten Suchindex. */
-  function knoten(name: string): number {
+  /** Tierindex zu einem deutschen Namen, ueber den echten Suchindex. */
+  function knotenIndex(name: string): number {
     const treffer = index.exact(name)
     expect(treffer, 'Tier nicht im Spiel: ' + name).not.toBeNull()
-    return animals[treffer!].node
+    return treffer!
+  }
+
+  /** Baumknoten zu einem deutschen Tiernamen, ueber den echten Suchindex. */
+  function knoten(name: string): number {
+    return animals[knotenIndex(name)].node
   }
 
   describe('Gemeinsame Gruppen', () => {
@@ -267,6 +273,29 @@ beschreibe('Erzeugte Spieldaten', () => {
     it('nennt zu jedem Bild Urheber und Lizenz', () => {
       const ohne = animals.filter((a) => a.image && (!a.image.author || !a.image.license))
       expect(ohne).toHaveLength(0)
+    })
+
+    it('ordnet jedes Tier einer gueltigen Grossgruppe zu oder keiner', () => {
+      const kategorien = animalsRaw.kategorien
+      expect(kategorien.length).toBeGreaterThan(10)
+      for (const k of kategorien) {
+        expect(k.de).toBeTruthy()
+        expect(k.en).toBeTruthy()
+      }
+      const ungueltig = animals.filter((a) => a.kat < -1 || a.kat >= kategorien.length)
+      expect(ungueltig).toHaveLength(0)
+      // Die grosse Mehrheit gehoert in eine Gruppe; ohne bleiben Randgruppen
+      // wie Schwaemme und Manteltiere.
+      const ohne = animals.filter((a) => a.kat === -1).length
+      expect(ohne / animals.length).toBeLessThan(0.05)
+    })
+
+    it('steckt bekannte Tiere in die richtige Grossgruppe', () => {
+      const name = (i: number): string => animalsRaw.kategorien[animals[i].kat]?.de ?? '—'
+      expect(name(knotenIndex('Löwe'))).toBe('Säugetiere')
+      expect(name(knotenIndex('Kolkrabe'))).toBe('Vögel')
+      expect(name(knotenIndex('Westliche Honigbiene'))).toBe('Insekten')
+      expect(name(knotenIndex('Weißer Hai'))).toBe('Knorpelfische')
     })
 
     it('findet jedes Tier ueber den Suchindex', () => {

@@ -15,6 +15,7 @@ import { CONFIG, type TierId } from './config.ts'
 import { PATHS, ensureDirs, readJson, writeJson } from './paths.ts'
 import { THUMB_PREFIX } from './commons.ts'
 import { indexVariants } from '../src/core/search.ts'
+import { loadTree, isDescendantOf } from './ncbi.ts'
 import type { PoolAnimal } from './3-enrich.ts'
 import type { BuiltTree } from './4-build-tree.ts'
 import type { NodeTuple } from '../src/core/types.ts'
@@ -83,6 +84,22 @@ async function main(): Promise<void> {
   const treeData = { ranks, nodes, hidden }
 
   // --- animals.json --------------------------------------------------------
+  /*
+   * Jedes Tier bekommt seine Grossgruppe mit, damit sich im Spiel eine Runde
+   * auf Voegel oder Insekten beschraenken laesst.
+   *
+   * Zugeordnet wird gegen die NCBI-Systematik, nicht gegen den Spielbaum: Der
+   * faltet Ketten mit nur einem Kind weg, und dabei fallen ausgerechnet
+   * Insecta, Squamata, Malacostraca und Echinodermata heraus. Im Spielbaum
+   * waeren sie als Anker also gar nicht vorhanden.
+   *
+   * Es sind dieselben Gruppen, nach denen Schritt 3 die Quoten verteilt.
+   */
+  const ncbi = await loadTree()
+  const kategorien = CONFIG.GRUPPEN.map((g) => ({ de: g.name, en: g.en }))
+  const kategorieVon = (taxid: number): number =>
+    CONFIG.GRUPPEN.findIndex((g) => isDescendantOf(taxid, g.taxid, ncbi))
+
   const sorted = [...pool].sort((a, b) => a.tier - b.tier || b.score - a.score)
   const animals = sorted.map((p) => {
     const node = built.leafIndex[String(p.taxid)]
@@ -91,6 +108,8 @@ async function main(): Promise<void> {
       node,
       score: p.score,
       tier: p.tier,
+      // -1 heisst: keine der Grossgruppen, etwa Schwaemme oder Manteltiere.
+      kat: kategorieVon(p.taxid),
       image: p.image
         ? {
             url: p.image.thumb,
@@ -109,7 +128,7 @@ async function main(): Promise<void> {
     const count = animals.filter((a) => a.tier === t).length
     tierRanges[String(t)] = { from: from < 0 ? 0 : from, to: from < 0 ? 0 : from + count }
   }
-  const animalsData = { animals, tierRanges, thumbPrefix: THUMB_PREFIX }
+  const animalsData = { animals, tierRanges, kategorien, thumbPrefix: THUMB_PREFIX }
 
   // --- search.json ---------------------------------------------------------
   const entries: Array<[string, number]> = []
@@ -259,6 +278,13 @@ async function main(): Promise<void> {
     console.log('    Stufe ' + t + ' (' + CONFIG.TIERS[t].name.de + '): ' + meta.counts.tiers[t])
   }
   console.log('  Suchbegriffe: ' + entries.length)
+  console.log('  Verteilung auf die Grossgruppen:')
+  kategorien.forEach((k, i) => {
+    const n = animals.filter((a) => a.kat === i).length
+    if (n > 0) console.log('    ' + k.de.padEnd(22) + String(n).padStart(5))
+  })
+  const ohneGruppe = animals.filter((a) => a.kat < 0).length
+  if (ohneGruppe > 0) console.log('    ' + 'ohne Gruppe'.padEnd(22) + String(ohneGruppe).padStart(5))
   const ausgewichen = (x: Record<string, Text>): number => Object.values(x).filter((v) => v.lang).length
   console.log(
     '  Steckbriefe deutsch: ' +

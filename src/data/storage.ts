@@ -21,6 +21,13 @@ export interface Einstellungen {
   thema: Thema
   /** Versuche je Runde. Infinity heisst ohne Limit. */
   maxGuesses: number
+  /**
+   * Grossgruppen, aus denen das gesuchte Tier kommen darf, als Indizes.
+   *
+   * Eine leere Liste heisst "alle" — sonst haette ein Zustand ohne jede Gruppe
+   * gar kein Tier uebrig, und die Ablage koennte das Spiel unspielbar machen.
+   */
+  kategorien: number[]
 }
 
 /**
@@ -75,6 +82,7 @@ export function ladeEinstellungen(): Einstellungen {
     thema: gespeichert.thema ?? 'system',
     maxGuesses:
       gespeichert.maxGuesses === OHNE_LIMIT ? Infinity : (gespeichert.maxGuesses ?? MAX_GUESSES),
+    kategorien: Array.isArray(gespeichert.kategorien) ? gespeichert.kategorien : [],
   }
 }
 
