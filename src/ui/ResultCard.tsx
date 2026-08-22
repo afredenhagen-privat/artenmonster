@@ -109,7 +109,7 @@ export function ResultCard({ data, state, lang, tier, puzzle, onNewRound }: Prop
               {t(lang, 'mehrErfahren')}
             </a>
             {' · '}
-            {t(lang, 'steckbriefQuelle')}
+            {t(lang, blurb.lang && blurb.lang !== lang ? 'steckbriefQuelleFremd' : 'steckbriefQuelle')}
           </p>
         </div>
       )}

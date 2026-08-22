@@ -31,6 +31,26 @@ function stempel(datei: string): string {
 /** Dateien, die nachgeladen werden und deshalb einen Inhaltsstempel brauchen. */
 const NACHLADBAR = ['blurbs.de.json', 'blurbs.en.json', 'gruppen.de.json', 'gruppen.en.json'] as const
 
+type Text = { text: string; url: string; lang?: 'de' | 'en' }
+
+/**
+ * Fehlt der Text in der gespielten Sprache, springt die andere ein.
+ *
+ * Das betrifft vor allem Kladen: Die englische Wikipedia fuehrt Artikel zu
+ * Gruppen, zu denen es im Deutschen keinen gibt — Neoaves, Percomorphaceae und
+ * rund vierhundert weitere. Bisher blieb das Feld dort leer, obwohl der Text
+ * vorlag. Lieber ein englischer Absatz mit ehrlicher Herkunftsangabe als gar
+ * keine Erklaerung; die Oberflaeche schreibt dazu, aus welcher Wikipedia er
+ * stammt.
+ */
+function mitRueckfall(primaer: Record<string, Text>, ersatz: Record<string, Text>, ersatzLang: 'de' | 'en'): Record<string, Text> {
+  const out: Record<string, Text> = { ...primaer }
+  for (const [k, v] of Object.entries(ersatz)) {
+    if (!out[k]) out[k] = { ...v, lang: ersatzLang }
+  }
+  return out
+}
+
 function mb(bytes: number): string {
   return bytes >= 1e6 ? (bytes / 1e6).toFixed(2) + ' MB' : Math.round(bytes / 1024) + ' KB'
 }
@@ -117,19 +137,23 @@ async function main(): Promise<void> {
    * Erdmaennchens. Die Taxon-ID ist stabil, ein veralteter Stand liefert dann
    * hoechstens keinen Text statt einem falschen.
    */
-  const gruppenDe: Record<string, { text: string; url: string }> = {}
-  const gruppenEn: Record<string, { text: string; url: string }> = {}
+  const gruppenNurDe: Record<string, Text> = {}
+  const gruppenNurEn: Record<string, Text> = {}
   built.nodes.forEach((n) => {
-    if (n.blurbDe) gruppenDe[String(n.taxid)] = n.blurbDe
-    if (n.blurbEn) gruppenEn[String(n.taxid)] = n.blurbEn
+    if (n.blurbDe) gruppenNurDe[String(n.taxid)] = n.blurbDe
+    if (n.blurbEn) gruppenNurEn[String(n.taxid)] = n.blurbEn
   })
+  const gruppenDe = mitRueckfall(gruppenNurDe, gruppenNurEn, 'en')
+  const gruppenEn = mitRueckfall(gruppenNurEn, gruppenNurDe, 'de')
 
-  const blurbsDe: Record<string, { text: string; url: string }> = {}
-  const blurbsEn: Record<string, { text: string; url: string }> = {}
+  const blurbsNurDe: Record<string, Text> = {}
+  const blurbsNurEn: Record<string, Text> = {}
   for (const p of sorted) {
-    if (p.blurbDe) blurbsDe[String(p.taxid)] = p.blurbDe
-    if (p.blurbEn) blurbsEn[String(p.taxid)] = p.blurbEn
+    if (p.blurbDe) blurbsNurDe[String(p.taxid)] = p.blurbDe
+    if (p.blurbEn) blurbsNurEn[String(p.taxid)] = p.blurbEn
   }
+  const blurbsDe = mitRueckfall(blurbsNurDe, blurbsNurEn, 'en')
+  const blurbsEn = mitRueckfall(blurbsNurEn, blurbsNurDe, 'de')
 
   // --- Zusicherungen -------------------------------------------------------
   const fehler: string[] = []
@@ -235,13 +259,28 @@ async function main(): Promise<void> {
     console.log('    Stufe ' + t + ' (' + CONFIG.TIERS[t].name.de + '): ' + meta.counts.tiers[t])
   }
   console.log('  Suchbegriffe: ' + entries.length)
-  console.log('  Steckbriefe deutsch: ' + Object.keys(blurbsDe).length + ', englisch: ' + Object.keys(blurbsEn).length)
+  const ausgewichen = (x: Record<string, Text>): number => Object.values(x).filter((v) => v.lang).length
+  console.log(
+    '  Steckbriefe deutsch: ' +
+      Object.keys(blurbsDe).length +
+      ' (' +
+      ausgewichen(blurbsDe) +
+      ' aus dem Englischen), englisch: ' +
+      Object.keys(blurbsEn).length +
+      ' (' +
+      ausgewichen(blurbsEn) +
+      ' aus dem Deutschen)',
+  )
   console.log(
     '  Gruppenerklaerungen deutsch: ' +
       Object.keys(gruppenDe).length +
-      ', englisch: ' +
+      ' (' +
+      ausgewichen(gruppenDe) +
+      ' aus dem Englischen), englisch: ' +
       Object.keys(gruppenEn).length +
-      ' von ' +
+      ' (' +
+      ausgewichen(gruppenEn) +
+      ' aus dem Deutschen), von ' +
       nodes.length +
       ' Knoten',
   )

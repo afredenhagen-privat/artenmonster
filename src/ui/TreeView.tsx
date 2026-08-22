@@ -320,7 +320,7 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, stec
                   {t(lang, 'mehrErfahren')}
                 </a>
                 {' · '}
-                {t(lang, 'steckbriefQuelle')}
+                {t(lang, erklaerung.lang && erklaerung.lang !== lang ? 'steckbriefQuelleFremd' : 'steckbriefQuelle')}
               </p>
             </>
           ) : (

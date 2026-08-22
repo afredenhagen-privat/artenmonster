@@ -30,8 +30,11 @@ beschreibe('Erzeugte Spieldaten', () => {
   const searchRaw = JSON.parse(fs.readFileSync(path.join(DATA, 'search.json'), 'utf8')) as {
     entries: [string, number][]
   }
-  const lies = (datei: string): Record<string, { text: string; url: string }> =>
-    JSON.parse(fs.readFileSync(path.join(DATA, datei), 'utf8')) as Record<string, { text: string; url: string }>
+  const lies = (datei: string): Record<string, { text: string; url: string; lang?: string }> =>
+    JSON.parse(fs.readFileSync(path.join(DATA, datei), 'utf8')) as Record<
+      string,
+      { text: string; url: string; lang?: string }
+    >
   const blurbs = { de: lies('blurbs.de.json'), en: lies('blurbs.en.json') }
   const gruppenTexte = { de: lies('gruppen.de.json'), en: lies('gruppen.en.json') }
   const meta = JSON.parse(fs.readFileSync(path.join(DATA, 'meta.json'), 'utf8')) as {
@@ -209,6 +212,35 @@ beschreibe('Erzeugte Spieldaten', () => {
           .digest('hex')
           .slice(0, 8)
         expect(meta.textVersion?.[datei], 'Stempel fehlt oder ist veraltet: ' + datei).toBe(soll)
+      }
+    })
+
+    it('springt mit der anderen Sprache ein, wo eine fehlt', () => {
+      /*
+       * Zu vielen Kladen gibt es nur einen englischen Wikipedia-Artikel. Der
+       * Text soll dann trotzdem erscheinen, gekennzeichnet mit seiner Herkunft.
+       * Beide Dateien decken deshalb dieselben Taxa ab.
+       */
+      expect(Object.keys(gruppenTexte.de).sort()).toEqual(Object.keys(gruppenTexte.en).sort())
+      expect(Object.keys(blurbs.de).sort()).toEqual(Object.keys(blurbs.en).sort())
+
+      const ausgewichen = Object.values(gruppenTexte.de).filter((v) => v.lang)
+      expect(ausgewichen.length).toBeGreaterThan(0)
+      for (const v of ausgewichen) {
+        expect(v.lang).toBe('en')
+        expect(v.url).toContain('en.wikipedia.org')
+      }
+    })
+
+    it('kennzeichnet nur die Texte, die wirklich aus der anderen Sprache kommen', () => {
+      for (const [datei, texte] of [
+        ['gruppen.de.json', gruppenTexte.de],
+        ['blurbs.de.json', blurbs.de],
+      ] as const) {
+        for (const [k, v] of Object.entries(texte)) {
+          const deutsch = v.url.includes('de.wikipedia.org')
+          expect(v.lang === undefined, datei + ' ' + k).toBe(deutsch)
+        }
       }
     })
 

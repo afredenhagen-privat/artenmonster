@@ -54,6 +54,7 @@ const STRINGS = {
     mehrErfahren: 'Artikel bei Wikipedia',
     bildVon: 'Bild: {autor} ({lizenz})',
     steckbriefQuelle: 'Text aus Wikipedia, CC BY-SA 4.0',
+    steckbriefQuelleFremd: 'Text aus der englischen Wikipedia, CC BY-SA 4.0',
 
     baum: 'Stammbaum',
     baumLeer: 'Rate ein Tier. Der Baum wächst mit jedem Versuch.',
@@ -133,6 +134,7 @@ const STRINGS = {
     mehrErfahren: 'Read on Wikipedia',
     bildVon: 'Image: {autor} ({lizenz})',
     steckbriefQuelle: 'Text from Wikipedia, CC BY-SA 4.0',
+    steckbriefQuelleFremd: 'Text from the German Wikipedia, CC BY-SA 4.0',
 
     baum: 'Tree of life',
     baumLeer: 'Make a guess. The tree grows with every try.',

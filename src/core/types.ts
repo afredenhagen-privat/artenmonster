@@ -67,6 +67,14 @@ export interface SearchData {
 export interface Blurb {
   text: string
   url: string
+  /**
+   * Gesetzt, wenn der Text aus der anderen Sprache stammt.
+   *
+   * Zu vielen Kladen gibt es nur einen englischen Wikipedia-Artikel. Statt das
+   * Feld leer zu lassen, springt der ein — und die Oberflaeche schreibt dazu,
+   * woher er kommt.
+   */
+  lang?: Lang
 }
 
 /**

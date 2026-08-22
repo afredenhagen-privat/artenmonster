@@ -13,17 +13,17 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | Spielbare Tiere | 4.000 (Leicht 500, Mittel 1.400, Schwer 2.100) |
 | Baumknoten | 5.773 |
 | Steckbriefe | je 4.000 deutsch und englisch |
-| Gruppenerklärungen | 1.205 deutsch, 1.584 englisch |
+| Gruppenerklärungen | je 1.599, davon 394 im Deutschen aus der englischen Wikipedia |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 99 |
+| Tests | 101 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
 verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
 Erklärung, Tiere ihren Steckbrief. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
-## Die sechs Entscheidungen, die man kennen muss
+## Die sieben Entscheidungen, die man kennen muss
 
 **Bekanntheit wird an Wikipedia-Abrufen gemessen, nicht an Sprachversionen.** Die Zahl der
 Sprachversionen misst, wie gründlich eine Gruppe erfasst ist, nicht wie bekannt ein Tier ist. Bei
@@ -57,6 +57,15 @@ Beide Stellen zählen deshalb gleich, danach entscheidet die Bekanntheit. Dazu w
 angezeigten Namen schwerer als einer im englischen oder wissenschaftlichen, sonst steht bei „Zebra"
 auf Deutsch die Wandermuschel oben (englisch *Zebra mussel*). Siehe `matchRang` in
 `src/core/search.ts`.
+
+**Fehlt ein Text in der gespielten Sprache, springt die andere ein.** Zu vielen Kladen gibt es nur
+einen englischen Wikipedia-Artikel — Whippomorpha, Neoaves, Asterozoa und rund vierhundert weitere.
+Das Feld leer zu lassen, obwohl der Text vorliegt, wäre Verschwendung; ein englischer Absatz mit
+ehrlicher Herkunftsangabe ist besser als gar keine Erklärung. Die Oberfläche schreibt „Text aus der
+englischen Wikipedia" darunter, der Link führt zum englischen Artikel. Umgekehrt genauso: 15 Gruppen
+und 56 Tiere haben nur einen deutschen Artikel und zeigen ihn im englischen Modus. Zusammengesetzt
+wird das zur Bauzeit in `mitRueckfall` (`tools/5-emit.ts`), damit zur Laufzeit weiterhin eine einzige
+Datei je Sprache reicht.
 
 **Kandidaten kommen über die Taxobox der deutschen Wikipedia, nicht über Wikidata.** Eine
 SPARQL-Abfrage über alle Taxa mit NCBI-ID läuft zuverlässig in den 60-Sekunden-Timeout, egal wie eng
