@@ -9,7 +9,9 @@ async function main(): Promise<void> {
   const stufen = [1, 2, 3] as const
   const namen = { 1: 'Leicht', 2: 'Mittel', 3: 'Schwer' }
 
-  console.log('Stufe      Tiere   Sitelinks von–bis   Median   Beispiele')
+  // score sind seit der Umstellung Wikipedia-Abrufe im Jahr, nicht mehr die
+  // Zahl der Sprachversionen. Die alte Beschriftung benannte die Zahlen falsch.
+  console.log('Stufe      Tiere   Abrufe/Jahr von-bis   Median   Beispiele')
   console.log('-'.repeat(96))
   for (const s of stufen) {
     const t = pool.filter((a) => a.tier === s).sort((a, b) => b.score - a.score)
