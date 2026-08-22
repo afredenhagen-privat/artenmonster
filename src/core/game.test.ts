@@ -162,13 +162,43 @@ describe('Sichtbarer Baumausschnitt', () => {
     expect(sichtbar.has(TIERE.wolf)).toBe(true)
   })
 
+  it('zeigt im Gruppenmodus auch die Verwandtschaft der Tipps untereinander', () => {
+    /*
+     * Ziel ist die Waldameise. Loewe und Hauskatze liegen mit ihr nur bei
+     * Metazoa zusammen, sind untereinander aber beide Katzen. Ohne die
+     * paarweisen Gruppen haengen sie beide direkt an Metazoa, und man sieht
+     * nicht, dass sie naeher miteinander verwandt sind.
+     */
+    let s = createGame(0, TIERE.ameise)
+    s = applyGuess(s, tree, 1, TIERE.loewe)
+    s = applyGuess(s, tree, 2, TIERE.katze)
+    const felidae = 3
+    expect(s.guesses.every((g) => g.lca === 0)).toBe(true)
+    expect(revealedNodes(s, tree, 'gruppe').has(felidae)).toBe(true)
+  })
+
+  it('braucht fuer die Verwandtschaft mindestens zwei Tipps', () => {
+    const s = applyGuess(createGame(0, TIERE.ameise), tree, 1, TIERE.loewe)
+    const felidae = 3
+    expect(revealedNodes(s, tree, 'gruppe').has(felidae)).toBe(false)
+  })
+
+  it('laesst die Verwandtschaft der Tipps im vollen Modus ohnehin sehen', () => {
+    let s = createGame(0, TIERE.ameise)
+    s = applyGuess(s, tree, 1, TIERE.loewe)
+    s = applyGuess(s, tree, 2, TIERE.katze)
+    expect(revealedNodes(s, tree, 'voll').has(3)).toBe(true)
+  })
+
   it('sammelt im Gruppenmodus die Gruppen mehrerer Tipps', () => {
     let s = createGame(0, TIERE.loewe)
     s = applyGuess(s, tree, 1, TIERE.ameise) // gemeinsam Metazoa
     s = applyGuess(s, tree, 2, TIERE.wolf) // gemeinsam Vertebrata
     s = applyGuess(s, tree, 3, TIERE.katze) // gemeinsam Felidae
     const sichtbar = revealedNodes(s, tree, 'gruppe')
-    // Die drei Gruppen als Kette der Eingrenzung, plus die drei Tipps.
+    // Metazoa, Vertebrata und Felidae als Kette der Eingrenzung, plus die drei
+    // Tipps. Die paarweisen Verwandtschaften fallen hier auf dieselben Knoten,
+    // deshalb kommt nichts dazu.
     expect(sichtbar.has(0)).toBe(true)
     expect(sichtbar.has(1)).toBe(true)
     expect(sichtbar.has(3)).toBe(true)

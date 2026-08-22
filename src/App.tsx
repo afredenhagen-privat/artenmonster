@@ -15,6 +15,7 @@ import { GuessInput } from './ui/GuessInput.tsx'
 import { GuessList } from './ui/GuessList.tsx'
 import { TreeView } from './ui/TreeView.tsx'
 import { ResultCard } from './ui/ResultCard.tsx'
+import { Vollbild } from './ui/Vollbild.tsx'
 
 type Modus = 'tag' | 'endlos' | 'zen'
 
@@ -29,6 +30,7 @@ export function App() {
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
+  const [vollbild, setVollbild] = useState(false)
   const [gruppen, setGruppen] = useState<Record<string, { text: string; url: string }>>({})
 
   useEffect(() => {
@@ -109,6 +111,15 @@ export function App() {
   const hinweisMoeglich = canTakeHint(state, data.tree)
   const uebrig = state.zen ? null : state.maxGuesses - state.guesses.length
 
+  const eingabe = (
+    <GuessInput
+      data={data}
+      state={state}
+      lang={lang}
+      onGuess={(animal) => setState(applyGuess(state, data.tree, animal, data.animals[animal].node))}
+    />
+  )
+
   const baum = (
     <TreeView
       tree={data.tree}
@@ -177,12 +188,7 @@ export function App() {
 
         {!fertig && (
           <div className="space-y-3">
-            <GuessInput
-              data={data}
-              state={state}
-              lang={lang}
-              onGuess={(animal) => setState(applyGuess(state, data.tree, animal, data.animals[animal].node))}
-            />
+            {eingabe}
 
             <div className="flex items-center justify-between">
               <span className="etikett">
@@ -216,15 +222,24 @@ export function App() {
           />
         )}
 
-        <button
-          type="button"
-          onClick={() => setBaumOffen((v) => !v)}
-          className="etikett border border-linie px-4 py-2.5 text-left transition hover:border-flechte hover:text-knochen lg:hidden"
-        >
-          {t(lang, 'baum')} {baumOffen ? '−' : '+'}
-        </button>
+        <div className="flex gap-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setBaumOffen((v) => !v)}
+            className="etikett flex-1 border border-linie px-4 py-2.5 text-left transition hover:border-flechte hover:text-knochen"
+          >
+            {t(lang, 'baum')} {baumOffen ? '−' : '+'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setVollbild(true)}
+            className="etikett border border-linie px-4 py-2.5 transition hover:border-flechte hover:text-knochen"
+          >
+            {t(lang, 'vollbild')}
+          </button>
+        </div>
 
-        {baumOffen && (
+        {baumOffen && !vollbild && (
           <div className="h-[62vh] lg:hidden">
             <Plattenrahmen lang={lang} modus={baumModus} setzeModus={setBaumModus}>
               {baum}
@@ -245,11 +260,46 @@ export function App() {
         hineingezoomt wird. Waechst der Bereich stattdessen mit dem Inhalt, wird
         das Einpassen wirkungslos und die Seite scrollt an den Aesten entlang.
       */}
-      <div className="hidden flex-1 lg:sticky lg:top-8 lg:block lg:h-[calc(100dvh-4rem)]">
-        <Plattenrahmen lang={lang} modus={baumModus} setzeModus={setBaumModus}>
+      {!vollbild && (
+        <div className="hidden flex-1 lg:sticky lg:top-8 lg:block lg:h-[calc(100dvh-4rem)]">
+          <Plattenrahmen
+            lang={lang}
+            modus={baumModus}
+            setzeModus={setBaumModus}
+            beiVollbild={() => setVollbild(true)}
+          >
+            {baum}
+          </Plattenrahmen>
+        </div>
+      )}
+
+      {vollbild && (
+        <Vollbild
+          lang={lang}
+          beiSchliessen={() => setVollbild(false)}
+          kopf={
+            <>
+              <span className="font-tafel text-[15px] text-knochen">{t(lang, 'titel')}</span>
+              <Segmente
+                werte={['gruppe', 'voll'] as const}
+                aktiv={baumModus}
+                beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
+                waehlen={setBaumModus}
+                schmal
+                titel={t(lang, 'baumModusHilfe')}
+              />
+              <span className="etikett">
+                {state.zen
+                  ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
+                  : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
+              </span>
+            </>
+          }
+          fuss={fertig ? <ErgebnisZeile data={data} state={state} lang={lang} /> : eingabe}
+        >
           {baum}
-        </Plattenrahmen>
-      </div>
+        </Vollbild>
+      )}
     </div>
   )
 }
@@ -262,25 +312,38 @@ function Plattenrahmen({
   lang,
   modus,
   setzeModus,
+  beiVollbild,
   children,
 }: {
   lang: Lang
   modus: BaumModus
   setzeModus: (m: BaumModus) => void
+  beiVollbild?: () => void
   children: React.ReactNode
 }) {
   return (
     <div className="flex h-full flex-col border border-linie bg-kabinett/40">
       <div className="flex items-center justify-between gap-3 border-b border-linie px-3 py-2">
         <span className="etikett">{t(lang, 'baum')}</span>
-        <Segmente
-          werte={['gruppe', 'voll'] as const}
-          aktiv={modus}
-          beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
-          waehlen={setzeModus}
-          schmal
-          titel={t(lang, 'baumModusHilfe')}
-        />
+        <div className="flex items-center gap-2">
+          <Segmente
+            werte={['gruppe', 'voll'] as const}
+            aktiv={modus}
+            beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
+            waehlen={setzeModus}
+            schmal
+            titel={t(lang, 'baumModusHilfe')}
+          />
+          {beiVollbild && (
+            <button
+              type="button"
+              onClick={beiVollbild}
+              className="etikett border border-linie px-2.5 py-1 transition hover:border-flechte hover:text-knochen"
+            >
+              {t(lang, 'vollbild')}
+            </button>
+          )}
+        </div>
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </div>
@@ -337,6 +400,20 @@ function Vorrat({ uebrig, gesamt }: { uebrig: number; gesamt: number }) {
         />
       ))}
     </span>
+  )
+}
+
+/** Im Vollbild reicht unten eine Zeile statt der ganzen Ergebniskarte. */
+function ErgebnisZeile({ data, state, lang }: { data: GameData; state: GameState; lang: Lang }) {
+  const gewonnen = state.status === 'gewonnen'
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-3">
+      <span className={'etikett ' + (gewonnen ? 'text-zinnober' : 'text-flechte')}>
+        {gewonnen ? t(lang, 'gewonnen') : t(lang, 'verloren')}
+      </span>
+      <span className="font-tafel text-[16px] text-knochen">{data.tree.nameOf(state.targetNode, lang)}</span>
+      <span className="binomen text-[12px] text-flechte">{data.tree.scientificName(state.targetNode)}</span>
+    </p>
   )
 }
 

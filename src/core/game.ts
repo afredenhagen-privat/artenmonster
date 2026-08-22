@@ -232,5 +232,24 @@ export function revealedNodes(state: GameState, tree: Tree, modus: BaumModus = '
   if (state.status !== 'laeuft' || state.zen) {
     for (const n of tree.pathToRoot(state.targetNode)) out.add(n)
   }
+
+  /*
+   * Im Gruppenmodus zusaetzlich die gemeinsamen Gruppen der Tipps untereinander.
+   *
+   * Ohne sie haengen alle Tiere mit derselben Distanz zur Loesung nebeneinander
+   * an einem Knoten, und man sieht nicht, dass Bienenfresser und Schwarzspecht
+   * naeher miteinander verwandt sind als mit dem Wanderfalken. Das verraet
+   * nichts ueber die Loesung: Es ist Wissen ueber die eigenen Tipps, das sich
+   * ohnehin nachschlagen liesse.
+   */
+  if (modus === 'gruppe' && state.guesses.length > 1) {
+    const blaetter = state.guesses.map((g) => g.node)
+    for (let i = 0; i < blaetter.length; i++) {
+      for (let j = i + 1; j < blaetter.length; j++) {
+        out.add(tree.lca(blaetter[i], blaetter[j]))
+      }
+    }
+  }
+
   return out
 }

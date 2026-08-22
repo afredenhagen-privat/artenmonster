@@ -64,6 +64,8 @@ const STRINGS = {
     gruppe: 'Gruppe',
     schliessen: 'Schließen',
     gesuchtesTier: 'Hier steckt die Lösung',
+    vollbild: 'Vollbild',
+    vollbildVerlassen: 'Vollbild verlassen',
 
     laedt: 'Lade Stammbaum ...',
     ladefehler: 'Die Spieldaten ließen sich nicht laden.',
@@ -135,6 +137,8 @@ const STRINGS = {
     gruppe: 'Group',
     schliessen: 'Close',
     gesuchtesTier: 'The answer is in here',
+    vollbild: 'Full screen',
+    vollbildVerlassen: 'Leave full screen',
 
     laedt: 'Loading the tree ...',
     ladefehler: 'Could not load the game data.',
