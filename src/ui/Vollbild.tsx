@@ -5,9 +5,11 @@ import { t } from '../i18n/strings.ts'
 /**
  * Vollbild für den Stammbaum.
  *
- * Der Baum ist das Kernstück, und auf einem grossen Bildschirm ist die schmale
- * Spalte daneben Verschwendung. Hier bekommt er alles: oben eine schmale Leiste
- * mit den Umschaltern, unten das Eingabefeld, dazwischen nichts als Baum.
+ * Der Baum liegt über die ganze Fläche, die Bedienung schwebt darüber: links
+ * oben ein Feld mit der Eingabe, rechts oben die Umschalter. Das ist nicht nur
+ * Geschmack — säße die Eingabe unten, klappte die Vorschlagsliste aus dem Bild,
+ * und eine Fußzeile nähme dem Baum die Höhe, die im Vollbild gerade der Gewinn
+ * sein soll.
  *
  * Die echte Vollbild-Schnittstelle des Browsers wird mitgenommen, wenn sie
  * verfügbar ist. Sie ist aber nur die Zugabe: Die Anzeige liegt ohnehin über
@@ -16,13 +18,15 @@ import { t } from '../i18n/strings.ts'
 
 interface Props {
   lang: Lang
-  kopf: React.ReactNode
-  fuss: React.ReactNode
+  /** Schwebt links oben: Eingabe und Stand der Runde. */
+  tafel: React.ReactNode
+  /** Schwebt rechts oben: Umschalter. */
+  steuerung: React.ReactNode
   beiSchliessen: () => void
   children: React.ReactNode
 }
 
-export function Vollbild({ lang, kopf, fuss, beiSchliessen, children }: Props) {
+export function Vollbild({ lang, tafel, steuerung, beiSchliessen, children }: Props) {
   // Escape schliesst, und das Blättern der Seite darunter wird stillgelegt.
   useEffect(() => {
     const beiTaste = (e: KeyboardEvent) => {
@@ -47,21 +51,28 @@ export function Vollbild({ lang, kopf, fuss, beiSchliessen, children }: Props) {
   }, [])
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-tinte">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-linie px-4 py-2">
-        {kopf}
-        <button
-          type="button"
-          onClick={beiSchliessen}
-          className="etikett ml-auto border border-linie px-3 py-1.5 transition hover:border-flechte hover:text-knochen"
-        >
-          {t(lang, 'vollbildVerlassen')}
-        </button>
+    <div className="fixed inset-0 z-50 bg-tinte">
+      <div className="absolute inset-0">{children}</div>
+
+      {/* Links oben. Breit genug für die Vorschlagsliste, die hier nach unten aufklappt. */}
+      <div className="pointer-events-none absolute left-3 top-3 z-10 w-[min(22rem,calc(100vw-1.5rem))] sm:left-5 sm:top-5">
+        <div className="pointer-events-auto border border-linie bg-kabinett/95 p-3 shadow-2xl shadow-tinte backdrop-blur">
+          {tafel}
+        </div>
       </div>
 
-      <div className="min-h-0 flex-1">{children}</div>
-
-      <div className="shrink-0 border-t border-linie px-4 py-3">{fuss}</div>
+      <div className="pointer-events-none absolute right-3 top-3 z-10 flex flex-wrap items-center justify-end gap-2 sm:right-5 sm:top-5">
+        <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+          {steuerung}
+          <button
+            type="button"
+            onClick={beiSchliessen}
+            className="etikett border border-linie bg-kabinett/95 px-3 py-1.5 backdrop-blur transition hover:border-flechte hover:text-knochen"
+          >
+            {t(lang, 'vollbildVerlassen')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

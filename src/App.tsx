@@ -110,6 +110,7 @@ export function App() {
   const fertig = state.status !== 'laeuft'
   const hinweisMoeglich = canTakeHint(state, data.tree)
   const uebrig = state.zen ? null : state.maxGuesses - state.guesses.length
+  const letzterTipp = state.guesses.at(-1)
 
   const eingabe = (
     <GuessInput
@@ -277,25 +278,52 @@ export function App() {
         <Vollbild
           lang={lang}
           beiSchliessen={() => setVollbild(false)}
-          kopf={
-            <>
-              <span className="font-tafel text-[15px] text-knochen">{t(lang, 'titel')}</span>
-              <Segmente
-                werte={['gruppe', 'voll'] as const}
-                aktiv={baumModus}
-                beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
-                waehlen={setBaumModus}
-                schmal
-                titel={t(lang, 'baumModusHilfe')}
-              />
-              <span className="etikett">
-                {state.zen
-                  ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
-                  : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
-              </span>
-            </>
+          steuerung={
+            <Segmente
+              werte={['gruppe', 'voll'] as const}
+              aktiv={baumModus}
+              beschriften={(m) => t(lang, m === 'gruppe' ? 'baumGruppe' : 'baumVoll')}
+              waehlen={setBaumModus}
+              schmal
+              titel={t(lang, 'baumModusHilfe')}
+            />
           }
-          fuss={fertig ? <ErgebnisZeile data={data} state={state} lang={lang} /> : eingabe}
+          tafel={
+            fertig ? (
+              <div className="space-y-2">
+                <ErgebnisZeile data={data} state={state} lang={lang} />
+                <button
+                  type="button"
+                  onClick={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier)}
+                  className="etikett w-full border border-nah bg-nah/15 px-3 py-2 text-nah transition hover:bg-nah hover:text-tinte"
+                >
+                  {t(lang, 'neueRunde')}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {eingabe}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="etikett">
+                    {state.zen
+                      ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
+                      : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
+                  </span>
+                  {letzterTipp && (
+                    <span className="truncate text-[12px] text-flechte">
+                      {letzterTipp.correct
+                        ? t(lang, 'gefunden')
+                        : data.tree.nameOf(letzterTipp.lca, lang) +
+                          ' · ' +
+                          (letzterTipp.steps === 1
+                            ? t(lang, 'nochEinSchritt')
+                            : t(lang, 'nochSchritte', { n: letzterTipp.steps }))}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          }
         >
           {baum}
         </Vollbild>

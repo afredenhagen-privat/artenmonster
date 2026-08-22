@@ -25,6 +25,8 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
   const [aktiv, setAktiv] = useState(0)
   const [meldung, setMeldung] = useState<string | null>(null)
   const [fokus, setFokus] = useState(false)
+  // Wohin die Vorschlagsliste aufklappt und wie hoch sie werden darf.
+  const [klappe, setKlappe] = useState({ nachOben: false, maxHoehe: 288 })
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
@@ -48,6 +50,30 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
   }, [data, text, gruppe])
 
   useEffect(() => setAktiv(0), [text, gruppe])
+
+  /*
+   * Die Vorschlagsliste klappt zu der Seite auf, wo mehr Platz ist, und wird auf
+   * genau diesen Platz begrenzt. Ohne das verschwindet sie, sobald das
+   * Eingabefeld weit unten sitzt, und auf niedrigen Fenstern ragt sie auch nach
+   * oben aus dem Bild.
+   */
+  useEffect(() => {
+    const messen = () => {
+      const box = inputRef.current?.getBoundingClientRect()
+      if (!box) return
+      const luft = 12
+      const platzUnten = window.innerHeight - box.bottom - luft
+      const platzOben = box.top - luft
+      const nachOben = platzUnten < 260 && platzOben > platzUnten
+      setKlappe({
+        nachOben,
+        maxHoehe: Math.max(120, Math.min(288, nachOben ? platzOben : platzUnten)),
+      })
+    }
+    messen()
+    window.addEventListener('resize', messen)
+    return () => window.removeEventListener('resize', messen)
+  }, [fokus, vorschlaege.length])
 
   useEffect(() => {
     if (!meldung) return
@@ -132,7 +158,11 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
       {vorschlaege.length > 0 && !disabled && fokus && (
         <ul
           ref={listRef}
-          className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto border border-linie bg-kabinett shadow-2xl shadow-tinte"
+          style={{ maxHeight: klappe.maxHoehe }}
+          className={
+            'absolute z-20 w-full overflow-y-auto border border-linie bg-kabinett shadow-2xl shadow-tinte ' +
+            (klappe.nachOben ? 'bottom-full mb-1' : 'mt-1')
+          }
         >
           {vorschlaege.map((animal, i) => {
             const node = data.animals[animal].node
