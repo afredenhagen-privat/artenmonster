@@ -121,7 +121,7 @@ export function App() {
   )
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[1500px] flex-col gap-5 p-4 lg:flex-row lg:gap-8 lg:p-8">
+    <div className="mx-auto flex min-h-dvh max-w-[1500px] flex-col gap-5 p-4 lg:flex-row lg:items-start lg:gap-8 lg:p-8">
       <div className="flex w-full flex-col gap-5 lg:max-w-sm">
         <header className="border-b border-linie pb-4">
           <div className="flex items-start justify-between gap-3">
@@ -240,7 +240,12 @@ export function App() {
         </footer>
       </div>
 
-      <div className="hidden min-h-[76vh] flex-1 lg:block">
+      {/*
+        Feste Hoehe, nicht min-height: Der Baum soll ein Fenster sein, in das
+        hineingezoomt wird. Waechst der Bereich stattdessen mit dem Inhalt, wird
+        das Einpassen wirkungslos und die Seite scrollt an den Aesten entlang.
+      */}
+      <div className="hidden flex-1 lg:sticky lg:top-8 lg:block lg:h-[calc(100dvh-4rem)]">
         <Plattenrahmen lang={lang} modus={baumModus} setzeModus={setBaumModus}>
           {baum}
         </Plattenrahmen>

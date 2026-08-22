@@ -53,9 +53,18 @@ export default {
           from: { opacity: '0', transform: 'translateY(6px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        // Ohne transform, ausdruecklich fuer SVG: Dort ueberschreibt eine
+        // CSS-transform-Eigenschaft das transform-Attribut, mit dem der Knoten
+        // positioniert wird. Ein animierter Knoten faellt sonst auf den
+        // Nullpunkt zurueck und alle Tiere liegen uebereinander.
+        einblenden: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
       },
       animation: {
         aufblenden: 'aufblenden 260ms ease-out both',
+        einblenden: 'einblenden 300ms ease-out both',
       },
     },
   },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { hierarchy, tree as d3tree, type HierarchyPointNode } from 'd3-hierarchy'
 import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { Tree } from '../core/tree.ts'
@@ -41,8 +41,18 @@ interface Props {
   gruppen: Record<string, { text: string; url: string }>
 }
 
-const SPALTE = 168
-const REIHE = 84
+/*
+ * Zeilenhoehe je nach Modus.
+ *
+ * Der volle Baum ist zwanzig Ebenen tief und besteht groesstenteils aus
+ * Kladen-Ketten. Mit der luftigen Zeilenhoehe des Gruppenmodus wird er so hoch,
+ * dass die Schrift beim Einpassen auf fuenf Pixel schrumpft. Enger gesetzt
+ * bleibt er lesbar, ohne dass etwas aus dem Bild faellt.
+ */
+const MASSE = {
+  gruppe: { spalte: 172, reihe: 88 },
+  voll: { spalte: 152, reihe: 54 },
+} as const
 
 function baueTeilbaum(tree: Tree, sichtbar: Set<number>, gesuchtUnter: number | null): Knoten | null {
   if (sichtbar.size === 0) return null
@@ -114,7 +124,8 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
     const wurzel = baueTeilbaum(tree, sichtbar, gesuchtUnter)
     if (!wurzel) return null
 
-    const gelegt = d3tree<Knoten>().nodeSize([SPALTE, REIHE])(hierarchy<Knoten>(wurzel))
+    const { spalte, reihe } = MASSE[modus]
+    const gelegt = d3tree<Knoten>().nodeSize([spalte, reihe])(hierarchy<Knoten>(wurzel))
 
     let minX = Infinity
     let maxX = -Infinity
@@ -125,41 +136,35 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
       maxY = Math.max(maxY, n.y)
     })
 
-    const rand = SPALTE / 2 + 20
+    const rand = spalte / 2 + 20
     return {
+      reihe,
       knoten: gelegt.descendants(),
       kanten: gelegt.links(),
       versatzX: -minX + rand,
       breite: maxX - minX + rand * 2,
-      hoehe: maxY + REIHE,
+      hoehe: maxY + reihe,
     }
   }, [tree, state, modus])
 
-  /** Setzt den Ausschnitt so, dass der ganze Baum ins Bild passt. */
-  const einpassen = useCallback(() => {
-    const box = rahmen.current?.getBoundingClientRect()
-    if (!box || !layout || !zoom.current) return
-    const luft = 24
-    const skala = Math.min(1.1, (box.width - luft) / layout.breite, (box.height - luft) / layout.hoehe)
-    const x = (box.width - layout.breite * skala) / 2
-    const y = (box.height - layout.hoehe * skala) / 2
-    zoom.current.setTransform(x, y, skala, 260)
-  }, [layout])
-
-  // Nach jeder Änderung am Baum neu einpassen, damit neue Tiere im Bild landen.
-  useLayoutEffect(() => {
-    const timer = setTimeout(einpassen, 30)
-    return () => clearTimeout(timer)
-  }, [einpassen])
-
-  useEffect(() => {
-    if (!rahmen.current) return
-    const beobachter = new ResizeObserver(() => einpassen())
-    beobachter.observe(rahmen.current)
-    return () => beobachter.disconnect()
-  }, [einpassen])
+  /*
+   * Das Einpassen macht die viewBox des SVG, nicht die Zoom-Bibliothek.
+   *
+   * Der Versuch, es imperativ ueber setTransform zu setzen, blieb wirkungslos:
+   * Die Transformation der Bibliothek blieb auf Identitaet stehen, und der Baum
+   * ragte unten aus dem Rahmen. Mit viewBox uebernimmt der Browser die
+   * Skalierung, sie stimmt bei jeder Rahmengroesse von selbst, und die
+   * Bibliothek macht nur noch das, was sie gut kann: schieben und zoomen.
+   */
+  const zuruecksetzen = useCallback(() => zoom.current?.resetTransform(260), [])
 
   useEffect(() => setGewaehlt(null), [state.targetNode])
+
+  // Nach einem neuen Tipp zurueck auf die eingepasste Ansicht, damit das eben
+  // hinzugekommene Tier sicher im Bild ist.
+  useEffect(() => {
+    zoom.current?.resetTransform(260)
+  }, [state.guesses.length, modus])
 
   if (!layout) {
     return (
@@ -177,8 +182,8 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
     <div ref={rahmen} className="relative h-full w-full overflow-hidden">
       <TransformWrapper
         ref={zoom}
-        minScale={0.15}
-        maxScale={2.5}
+        minScale={0.6}
+        maxScale={8}
         limitToBounds={false}
         doubleClick={{ mode: 'zoomIn' }}
         wheel={{ step: 0.08 }}
@@ -188,14 +193,19 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
           Sonst rechnet die Zentrierung mit der Groesse des Rahmens statt mit der
           des Baums, und die Knoten landen an falschen Stellen.
         */}
-        <TransformComponent wrapperClass="!h-full !w-full">
-          <svg width={layout.breite} height={layout.hoehe}>
-            <g transform={`translate(${layout.versatzX}, ${REIHE / 2})`}>
+        <TransformComponent wrapperClass="!h-full !w-full" contentClass="!h-full !w-full">
+          <svg
+            className="h-full w-full"
+            viewBox={`0 0 ${layout.breite} ${layout.hoehe}`}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <g transform={`translate(${layout.versatzX}, ${layout.reihe / 2})`}>
               {layout.kanten.map((kante) => (
                 <Ast
                   key={kante.target.data.index}
                   quelle={kante.source}
                   ziel={kante.target}
+                  reihe={layout.reihe}
                   ton={
                     kante.target.data.index === GESUCHT
                       ? GESUCHT_TON
@@ -237,7 +247,7 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen }: Pr
 
       <button
         type="button"
-        onClick={einpassen}
+        onClick={zuruecksetzen}
         className="absolute bottom-3 right-3 border border-linie bg-kabinett/95 px-3 py-1.5 font-etikett text-[10px] uppercase tracking-etikett text-flechte transition hover:border-flechte hover:text-knochen"
       >
         {t(lang, 'zuruecksetzen')}
@@ -285,31 +295,40 @@ function Ast({
   quelle,
   ziel,
   ton,
+  reihe,
 }: {
   quelle: HierarchyPointNode<Knoten>
   ziel: HierarchyPointNode<Knoten>
   ton: Ton | null
+  reihe: number
 }) {
-  const oben = quelle.y + 16
-  const unten = ziel.y - 24
-  const knick = quelle.y + REIHE * 0.5
+  const oben = quelle.y + 15
+  const unten = ziel.y - 22
+  const knick = quelle.y + reihe * 0.5
   const ausgelassen = ziel.data.ausgelassen
   const farbe = ton ? ton.linie : 'text-linie'
 
   return (
-    <g className={farbe}>
+    <g>
+      {/*
+        Die waagerechte Schiene ist Struktur und bleibt neutral. Faerbte sie
+        jeder Ast mit, uebermalt der zuletzt gezeichnete alle anderen, und die
+        ganze Verzweigung sieht nach dem heissesten Tipp aus.
+      */}
       <path
         d={`M${quelle.x},${oben} L${quelle.x},${knick} L${ziel.x},${knick}`}
         fill="none"
         stroke="currentColor"
         strokeWidth={1}
+        className="text-linie"
       />
       <path
         d={`M${ziel.x},${knick} L${ziel.x},${unten}`}
         fill="none"
         stroke="currentColor"
-        strokeWidth={1}
+        strokeWidth={ton ? 1.5 : 1}
         strokeDasharray={ausgelassen > 0 ? '2 4' : undefined}
+        className={farbe}
       />
       {ausgelassen > 0 && (
         <text x={ziel.x + 6} y={(knick + unten) / 2 + 3} className="fill-flechte font-etikett text-[9px]">
@@ -427,7 +446,7 @@ function Marke({
       : 'fill-kabinett stroke-linie'
 
   return (
-    <g transform={`translate(${x - breite / 2}, ${y - hoehe / 2 + 4})`} className="animate-aufblenden">
+    <g transform={`translate(${x - breite / 2}, ${y - hoehe / 2 + 4})`} className="animate-einblenden">
       <rect width={breite} height={hoehe} className={rahmen} strokeWidth={1} />
       <text
         x={breite / 2}
