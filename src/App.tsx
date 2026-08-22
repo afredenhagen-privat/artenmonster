@@ -8,7 +8,15 @@ import {
   ladeTagesErgebnis,
   buchePartie,
 } from './data/storage.ts'
-import { applyGuess, canTakeHint, createGame, takeHint, type BaumModus, type GameState } from './core/game.ts'
+import {
+  applyGuess,
+  canTakeHint,
+  createGame,
+  takeHint,
+  GUESS_OPTIONS,
+  type BaumModus,
+  type GameState,
+} from './core/game.ts'
 import { dayKey, dailyIndex, puzzleNumber } from './core/daily.ts'
 import type { BlurbData, Lang, TierId } from './core/types.ts'
 import { t, tierName } from './i18n/strings.ts'
@@ -29,6 +37,7 @@ export function App() {
   const [tier, setTier] = useState<TierId>(anfang.tier)
   const [baumModus, setBaumModus] = useState<BaumModus>(anfang.baumModus)
   const [thema, setThema] = useState<Thema>(anfang.thema)
+  const [maxGuesses, setMaxGuesses] = useState<number>(anfang.maxGuesses)
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
@@ -40,8 +49,8 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    speichereEinstellungen({ lang, tier, baumModus, thema })
-  }, [lang, tier, baumModus, thema])
+    speichereEinstellungen({ lang, tier, baumModus, thema, maxGuesses })
+  }, [lang, tier, baumModus, thema, maxGuesses])
 
   /*
    * Die Farbwahl haengt am Wurzelelement, damit sie ohne Ausnahme fuer alles
@@ -75,7 +84,7 @@ export function App() {
   }, [data, lang])
 
   /** Wählt ein Zieltier und startet eine Runde. */
-  const starte = useCallback((d: GameData, m: Modus, stufe: TierId) => {
+  const starte = useCallback((d: GameData, m: Modus, stufe: TierId, versuche: number) => {
     const bereich = d.tierRanges[String(stufe)]
     const groesse = bereich.to - bereich.from
     if (groesse <= 0) return
@@ -85,12 +94,15 @@ export function App() {
         ? bereich.from + dailyIndex(dayKey(), groesse, 'stufe' + stufe)
         : bereich.from + Math.floor(Math.random() * groesse)
 
-    setState(createGame(index, d.animals[index].node, { zen: m === 'zen' }))
+    setState(createGame(index, d.animals[index].node, { zen: m === 'zen', maxGuesses: versuche }))
   }, [])
 
+  // Eine andere Versuchszahl mitten in der Runde waere mehrdeutig: Wer schon
+  // fuenfundzwanzig Mal geraten hat und auf zehn stellt, haette rueckwirkend
+  // verloren. Es beginnt deshalb eine neue Runde, wie bei der Stufe auch.
   useEffect(() => {
-    if (data) starte(data, modus, tier)
-  }, [data, modus, tier, starte])
+    if (data) starte(data, modus, tier, maxGuesses)
+  }, [data, modus, tier, maxGuesses, starte])
 
   // Tagesergebnis festhalten, damit es nach dem Neuladen erhalten bleibt.
   useEffect(() => {
@@ -131,7 +143,10 @@ export function App() {
   const schonGespielt = modus === 'tag' ? ladeTagesErgebnis(dayKey(), tier) : null
   const fertig = state.status !== 'laeuft'
   const hinweisMoeglich = canTakeHint(state, data.tree)
-  const uebrig = state.zen ? null : state.maxGuesses - state.guesses.length
+  // Ohne Limit gibt es nichts abzuzaehlen, egal ob das am Zen-Modus liegt oder
+  // an der eingestellten Versuchszahl.
+  const ohneLimit = !Number.isFinite(state.maxGuesses)
+  const uebrig = ohneLimit ? null : state.maxGuesses - state.guesses.length
   const letzterTipp = state.guesses.at(-1)
 
   const eingabe = (
@@ -214,6 +229,26 @@ export function App() {
           <p className="mt-2 text-[12px] leading-snug text-flechte">{t(lang, 'stufeHinweis')}</p>
         </div>
 
+        {/*
+          Im Zen-Modus gibt es grundsätzlich kein Limit. Die Auswahl dort
+          anzubieten hieße, eine Einstellung zu zeigen, die nichts bewirkt.
+        */}
+        {modus !== 'zen' && (
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="etikett">{t(lang, 'versucheFeld')}</span>
+              <Segmente
+                werte={GUESS_OPTIONS}
+                aktiv={maxGuesses}
+                beschriften={(n) => (Number.isFinite(n) ? String(n) : t(lang, 'ohneLimit'))}
+                waehlen={setMaxGuesses}
+                schmal
+              />
+            </div>
+            <p className="mt-2 text-[12px] leading-snug text-flechte">{t(lang, 'versucheHinweis')}</p>
+          </div>
+        )}
+
         {schonGespielt && !fertig && (
           <p className="border-l-2 border-l-linie bg-kabinett/60 px-4 py-2.5 text-[13px] text-flechte">
             {lang === 'de' ? 'Dieses Tagesrätsel hast du schon gespielt.' : 'You already played today’s puzzle.'}
@@ -226,7 +261,7 @@ export function App() {
 
             <div className="flex items-center justify-between">
               <span className="etikett">
-                {state.zen
+                {ohneLimit
                   ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
                   : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
               </span>
@@ -252,7 +287,7 @@ export function App() {
             lang={lang}
             tier={tier}
             puzzle={modus === 'tag' ? puzzleNumber(dayKey()) : undefined}
-            onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier)}
+            onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses)}
           />
         )}
 
@@ -336,14 +371,14 @@ export function App() {
                 lang={lang}
                 tier={tier}
                 puzzle={modus === 'tag' ? puzzleNumber(dayKey()) : undefined}
-                onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier)}
+                onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier, maxGuesses)}
               />
             ) : (
               <div className="space-y-2">
                 {eingabe}
                 <div className="flex items-center justify-between gap-3">
                   <span className="etikett">
-                    {state.zen
+                    {ohneLimit
                       ? t(lang, 'versucheZen', { n: state.guesses.length + 1 })
                       : t(lang, 'versuche', { n: state.guesses.length + 1, max: state.maxGuesses })}
                   </span>
@@ -454,15 +489,22 @@ function Segmente<T extends string | number>({
   )
 }
 
-/** Verbleibende Versuche als Strichliste statt als Zahl. */
+/**
+ * Verbleibende Versuche als Strichliste statt als Zahl.
+ *
+ * Mehr als zwanzig Striche werden zur Zaunlatte, deshalb steht bei groesseren
+ * Vorraeten ein Strich fuer mehrere Versuche. Aufgerundet wird bewusst: Solange
+ * noch ein Versuch uebrig ist, soll auch noch ein Strich stehen.
+ */
 function Vorrat({ uebrig, gesamt }: { uebrig: number; gesamt: number }) {
   const striche = Math.min(gesamt, 20)
+  const voll = Math.ceil((Math.max(0, uebrig) / gesamt) * striche)
   return (
     <span className="flex items-end gap-[2px]" aria-label={String(uebrig)}>
       {Array.from({ length: striche }, (_, i) => (
         <span
           key={i}
-          className={'block w-[2px] ' + (i < uebrig ? 'h-3 bg-flechte' : 'h-1.5 bg-linie')}
+          className={'block w-[2px] ' + (i < voll ? 'h-3 bg-flechte' : 'h-1.5 bg-linie')}
         />
       ))}
     </span>

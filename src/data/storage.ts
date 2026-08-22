@@ -1,4 +1,4 @@
-import type { BaumModus } from '../core/game.ts'
+import { MAX_GUESSES, type BaumModus } from '../core/game.ts'
 import type { Lang, TierId } from '../core/types.ts'
 
 /**
@@ -19,7 +19,16 @@ export interface Einstellungen {
   /** Wie viel vom Stammbaum gezeigt wird. */
   baumModus: BaumModus
   thema: Thema
+  /** Versuche je Runde. Infinity heisst ohne Limit. */
+  maxGuesses: number
 }
+
+/**
+ * JSON kennt kein Infinity — JSON.stringify macht daraus null, und beim Lesen
+ * faellt der Wert stillschweigend auf den Standard zurueck. Deshalb steht "ohne
+ * Limit" in der Ablage als 0.
+ */
+const OHNE_LIMIT = 0
 
 export interface TagesErgebnis {
   tag: string
@@ -64,11 +73,16 @@ export function ladeEinstellungen(): Einstellungen {
     tier: gespeichert.tier ?? 1,
     baumModus: gespeichert.baumModus ?? 'gruppe',
     thema: gespeichert.thema ?? 'system',
+    maxGuesses:
+      gespeichert.maxGuesses === OHNE_LIMIT ? Infinity : (gespeichert.maxGuesses ?? MAX_GUESSES),
   }
 }
 
 export function speichereEinstellungen(e: Einstellungen): void {
-  write('settings', e)
+  write('settings', {
+    ...e,
+    maxGuesses: Number.isFinite(e.maxGuesses) ? e.maxGuesses : OHNE_LIMIT,
+  })
 }
 
 export function ladeTagesErgebnis(tag: string, tier: TierId): TagesErgebnis | null {

@@ -9,6 +9,7 @@ import {
   bestSteps,
   knownNode,
   hintsEarned,
+  hintThresholds,
   canTakeHint,
   nextHintNode,
   takeHint,
@@ -93,6 +94,26 @@ describe('Spiellogik', () => {
     expect(s.guesses).toHaveLength(1)
   })
 
+  it('laesst sich ohne Versuchslimit spielen, auch ausserhalb des Zen-Modus', () => {
+    /*
+     * Unbegrenzt und Zen sind zweierlei: Zen deckt zusaetzlich den Zielpfad auf.
+     * Wer nur ohne Limit raten will, soll den Baum trotzdem erst aufdecken
+     * muessen.
+     */
+    let s = createGame(0, TIERE.loewe, { maxGuesses: Infinity })
+    expect(s.zen).toBe(false)
+    for (let i = 1; i <= 40; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    expect(s.status).toBe('laeuft')
+  })
+
+  it('verliert genau beim eingestellten Limit', () => {
+    let s = createGame(0, TIERE.loewe, { maxGuesses: 10 })
+    for (let i = 1; i <= 9; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    expect(s.status).toBe('laeuft')
+    s = applyGuess(s, tree, 10, TIERE.ameise)
+    expect(s.status).toBe('verloren')
+  })
+
   it('kennt im Zen-Modus kein Versuchslimit', () => {
     let s = createGame(0, TIERE.loewe, { zen: true })
     for (let i = 1; i <= 30; i++) s = applyGuess(s, tree, i, TIERE.ameise)
@@ -108,6 +129,24 @@ describe('Hinweise', () => {
     for (let i = 1; i <= 7; i++) s = applyGuess(s, tree, i, TIERE.ameise)
     expect(hintsEarned(s)).toBe(0)
     expect(canTakeHint(s, tree)).toBe(false)
+  })
+
+  it('zieht die Hinweisschwellen mit dem Versuchsvorrat mit', () => {
+    /*
+     * Bei zehn Versuchen waere ein Hinweis erst nach vierzehn Fehlversuchen
+     * unerreichbar. Die Schwellen sind deshalb Anteile; bei zwanzig Versuchen
+     * kommen weiterhin 8 und 14 heraus.
+     */
+    expect(hintThresholds(20)).toEqual([8, 14])
+    expect(hintThresholds(10)).toEqual([4, 7])
+    expect(hintThresholds(50)).toEqual([20, 35])
+    expect(hintThresholds(Infinity)).toEqual([8, 14])
+
+    let s = createGame(0, TIERE.loewe, { maxGuesses: 10 })
+    for (let i = 1; i <= 3; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    expect(hintsEarned(s)).toBe(0)
+    s = applyGuess(s, tree, 4, TIERE.ameise)
+    expect(hintsEarned(s)).toBe(1)
   })
 
   it('deckt genau eine Ebene unterhalb des Bekannten auf', () => {

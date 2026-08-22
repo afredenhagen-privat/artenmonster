@@ -16,9 +16,10 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | Gruppenerklärungen | je 1.599, davon 394 im Deutschen aus der englischen Wikipedia |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 101 |
+| Tests | 105 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
+Versuche wählbar in Zehnerschritten von 10 bis 50 oder ohne Limit.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
 verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
 Erklärung, Tiere ihren Steckbrief. Nach dem Spielende steht die volle Ergebniskarte auch im Vollbild.

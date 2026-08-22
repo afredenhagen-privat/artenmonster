@@ -6,8 +6,35 @@ import type { Tree } from './tree.ts'
  */
 
 export const MAX_GUESSES = 20
+
+/**
+ * Waehlbare Versuchszahlen, Infinity heisst ohne Limit.
+ *
+ * Zwanzig war lange die einzige Zahl. Sie passt fuer die Stufe "Leicht", wird
+ * in "Schwer" aber knapp, und wer den Baum in Ruhe erkunden will, braucht gar
+ * kein Limit. Zehnerschritte reichen als Raster; feiner einzustellen bringt
+ * niemandem etwas.
+ */
+export const GUESS_OPTIONS = [10, 20, 30, 40, 50, Infinity] as const
+/**
+ * Nach wie vielen Fehlversuchen ein Hinweis faellig wird, als Anteil am
+ * Versuchsvorrat.
+ *
+ * Frueher standen dort die festen Zahlen 8 und 14, die zu den zwanzig Versuchen
+ * passten, die es als einzige Einstellung gab. Bei zehn Versuchen waere der
+ * zweite Hinweis unerreichbar gewesen und der erste haette drei Versuche uebrig
+ * gelassen. Als Anteil ergeben zwanzig Versuche weiterhin genau 8 und 14.
+ */
+const HINT_ANTEILE = [0.4, 0.7] as const
+
 /** Nach so vielen Fehlversuchen darf ein Hinweis abgerufen werden. */
 export const HINT_AFTER = [8, 14] as const
+
+/** Die Schwellen fuer einen konkreten Vorrat. Ohne Limit bleibt es bei 8 und 14. */
+export function hintThresholds(maxGuesses: number): number[] {
+  if (!Number.isFinite(maxGuesses)) return [...HINT_AFTER]
+  return HINT_ANTEILE.map((anteil) => Math.max(1, Math.round(maxGuesses * anteil)))
+}
 
 export type GameStatus = 'laeuft' | 'gewonnen' | 'verloren'
 
@@ -133,7 +160,7 @@ export function knownNode(state: GameState, tree: Tree): number {
 export function hintsEarned(state: GameState): number {
   if (state.zen) return Infinity
   const wrong = state.guesses.filter((g) => !g.correct).length
-  return HINT_AFTER.filter((n) => wrong >= n).length
+  return hintThresholds(state.maxGuesses).filter((n) => wrong >= n).length
 }
 
 export function canTakeHint(state: GameState, tree: Tree): boolean {

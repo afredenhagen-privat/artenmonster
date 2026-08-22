@@ -27,7 +27,10 @@ export function buildShareText(state: GameState, options: ShareOptions): string 
   const stufe = lang === 'de' ? 'Stufe ' + tier : 'Level ' + tier
   const kopf = puzzle !== undefined ? 'Artenmonster #' + puzzle + ' · ' + stufe : 'Artenmonster · ' + stufe
 
-  const ergebnis = state.status === 'gewonnen' ? state.guesses.length + '/' + state.maxGuesses : 'X/' + state.maxGuesses
+  // Ohne Limit steht das Unendlichzeichen im Nenner. "3/Infinity" haette sonst
+  // im geteilten Text gestanden.
+  const nenner = Number.isFinite(state.maxGuesses) ? String(state.maxGuesses) : '∞'
+  const ergebnis = (state.status === 'gewonnen' ? String(state.guesses.length) : 'X') + '/' + nenner
 
   // Bei vielen Tipps in Zeilen zu fuenft umbrechen, sonst wird es unlesbar.
   const felder = state.guesses.map((g) => feldFuer(g.steps))

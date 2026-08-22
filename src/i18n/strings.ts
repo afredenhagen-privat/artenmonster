@@ -22,6 +22,10 @@ const STRINGS = {
     stufe3: 'Schwer',
     stufeHinweis: 'Die Stufe bestimmt nur das gesuchte Tier. Raten darfst du immer alles.',
 
+    versucheFeld: 'Versuche',
+    ohneLimit: '∞',
+    versucheHinweis: 'Eine andere Zahl startet eine neue Runde. ∞ heißt ohne Limit.',
+
     eingabe: 'Tier eingeben ...',
     raten: 'Raten',
     versuche: 'Versuch {n} von {max}',
@@ -101,6 +105,10 @@ const STRINGS = {
     stufe2: 'Medium',
     stufe3: 'Hard',
     stufeHinweis: 'The level only sets the target. You can always guess any animal.',
+
+    versucheFeld: 'Guesses',
+    ohneLimit: '∞',
+    versucheHinweis: 'Changing the number starts a new round. ∞ means no limit.',
 
     eingabe: 'Enter an animal ...',
     raten: 'Guess',

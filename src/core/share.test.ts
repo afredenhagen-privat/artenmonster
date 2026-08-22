@@ -70,6 +70,11 @@ describe('Ergebnis teilen', () => {
     expect(zeilen[1].length / 2).toBeLessThanOrEqual(5)
   })
 
+  it('schreibt ohne Limit das Unendlichzeichen in den Nenner', () => {
+    const s = applyGuess(createGame(0, LOEWE, { maxGuesses: Infinity }), tree, 0, LOEWE)
+    expect(buildShareText(s, { lang: 'de', tier: 1 })).toContain('1/∞')
+  })
+
   it('haengt die Adresse an, wenn eine mitgegeben wird', () => {
     const s = applyGuess(createGame(0, LOEWE), tree, 0, LOEWE)
     const text = buildShareText(s, { lang: 'de', tier: 1, url: 'https://example.org/artenmonster' })
