@@ -321,18 +321,23 @@ export function App() {
               titel={t(lang, 'baumModusHilfe')}
             />
           }
+          tafelGerahmt={!fertig}
           tafel={
             fertig ? (
-              <div className="space-y-2">
-                <ErgebnisZeile data={data} state={state} lang={lang} />
-                <button
-                  type="button"
-                  onClick={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier)}
-                  className="etikett w-full border border-nah bg-nah/15 px-3 py-2 text-nah transition hover:bg-nah hover:text-tinte"
-                >
-                  {t(lang, 'neueRunde')}
-                </button>
-              </div>
+              /*
+               * Nach dem Spielende dieselbe Ergebniskarte wie in der Seitenspalte,
+               * mit Bild, Steckbrief und vollem systematischen Pfad. Vorher stand
+               * hier nur eine Zeile, und wer im Vollbild spielte, bekam das Tier,
+               * das er gerade gesucht hatte, nie zu sehen.
+               */
+              <ResultCard
+                data={data}
+                state={state}
+                lang={lang}
+                tier={tier}
+                puzzle={modus === 'tag' ? puzzleNumber(dayKey()) : undefined}
+                onNewRound={() => starte(data, modus === 'tag' ? 'endlos' : modus, tier)}
+              />
             ) : (
               <div className="space-y-2">
                 {eingabe}
@@ -461,22 +466,6 @@ function Vorrat({ uebrig, gesamt }: { uebrig: number; gesamt: number }) {
         />
       ))}
     </span>
-  )
-}
-
-/** Im Vollbild reicht unten eine Zeile statt der ganzen Ergebniskarte. */
-function ErgebnisZeile({ data, state, lang }: { data: GameData; state: GameState; lang: Lang }) {
-  const gewonnen = state.status === 'gewonnen'
-  return (
-    <p className="flex flex-wrap items-baseline gap-x-3">
-      <span className={'etikett ' + (gewonnen ? 'text-zinnober' : 'text-flechte')}>
-        {gewonnen ? t(lang, 'gewonnen') : t(lang, 'verloren')}
-      </span>
-      <span className="font-tafel text-[16px] text-knochen">{data.tree.nameOf(state.targetNode, lang)}</span>
-      <span className="binomen text-[12px] text-flechte">
-        {data.tree.latinIfDistinct(state.targetNode, lang) ?? ''}
-      </span>
-    </p>
   )
 }
 

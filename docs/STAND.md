@@ -21,7 +21,8 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
 verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
-Erklärung, Tiere ihren Steckbrief. Installierbar als PWA, offline spielbar bis auf die Tierfotos.
+Erklärung, Tiere ihren Steckbrief. Nach dem Spielende steht die volle Ergebniskarte auch im Vollbild.
+Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
 ## Die sieben Entscheidungen, die man kennen muss
 
