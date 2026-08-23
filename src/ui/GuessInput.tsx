@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GameData } from '../data/load.ts'
 import type { GameState } from '../core/game.ts'
 import { alreadyGuessed, animalsInGroup, knownNode } from '../core/game.ts'
@@ -34,6 +34,20 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
   const animalNodes = useMemo(() => data.animals.map((a) => a.node), [data])
 
   /**
+   * Bereits geratene Tiere stehen nicht mehr in der Liste.
+   *
+   * Vorher waren sie ausgegraut dabei. Das war ehrlich gemeint, aber im Weg:
+   * Bei "Zebra" oder "Specht" nehmen die alten Tipps genau die Plätze weg, die
+   * die noch offenen Tiere bräuchten, und anklicken lässt sich ohnehin keiner
+   * von ihnen. Wer wissen will, was er schon geraten hat, sieht es im Protokoll
+   * darunter.
+   */
+  const nochOffen = useCallback(
+    (animal: number) => !alreadyGuessed(state, animal),
+    [state],
+  )
+
+  /**
    * Bei leerer Eingabe: die Tiere der bereits eingegrenzten Gruppe anbieten,
    * sofern es wenige genug sind. Sonst die Treffer zur Eingabe.
    */
@@ -51,9 +65,18 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
    * gemeinte Tier ueberhaupt drankam. Die Liste scrollt ohnehin.
    */
   const vorschlaege = useMemo(() => {
-    if (text.trim().length < 1) return gruppe ? gruppe.tiere.slice(0, 30) : []
-    return data.search.search(text, 12, (animal) => data.tree.nameOf(data.animals[animal].node, lang))
-  }, [data, text, gruppe, lang])
+    if (text.trim().length < 1) return gruppe ? gruppe.tiere.filter(nochOffen).slice(0, 30) : []
+    /*
+     * Gesucht wird mit Reserve, gefiltert wird danach: Sonst schrumpft die Liste
+     * mit jedem Tipp, weil die geratenen Tiere die zwölf Plätze schon belegt
+     * haben, bevor sie herausfallen.
+     */
+    const reserve = 12 + Math.min(state.guesses.length, 60)
+    return data.search
+      .search(text, reserve, (animal) => data.tree.nameOf(data.animals[animal].node, lang))
+      .filter(nochOffen)
+      .slice(0, 12)
+  }, [data, text, gruppe, lang, nochOffen, state.guesses.length])
 
   useEffect(() => setAktiv(0), [text, gruppe])
 
@@ -205,7 +228,6 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
         >
           {vorschlaege.map((animal, i) => {
             const node = data.animals[animal].node
-            const schonGeraten = alreadyGuessed(state, animal)
             return (
               <li key={animal}>
                 <button
@@ -214,8 +236,7 @@ export function GuessInput({ data, state, lang, disabled, onGuess }: Props) {
                   onClick={() => absenden(animal)}
                   className={
                     'flex w-full items-baseline justify-between gap-3 border-l-2 px-4 py-2 text-left transition ' +
-                    (i === aktiv ? 'border-l-nah bg-fach' : 'border-l-transparent') +
-                    (schonGeraten ? ' opacity-35' : '')
+                    (i === aktiv ? 'border-l-nah bg-fach' : 'border-l-transparent')
                   }
                 >
                   <span className="font-tafel text-[14px] text-knochen">{data.tree.nameOf(node, lang)}</span>
