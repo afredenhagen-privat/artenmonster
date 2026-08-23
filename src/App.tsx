@@ -25,6 +25,7 @@ import { GuessList } from './ui/GuessList.tsx'
 import { TreeView } from './ui/TreeView.tsx'
 import { ResultCard } from './ui/ResultCard.tsx'
 import { Vollbild } from './ui/Vollbild.tsx'
+import { Konfetti } from './ui/Konfetti.tsx'
 
 type Modus = 'tag' | 'endlos' | 'zen'
 
@@ -71,6 +72,11 @@ export function App() {
   const [thema, setThema] = useState<Thema>(anfang.thema)
   const [maxGuesses, setMaxGuesses] = useState<number>(anfang.maxGuesses)
   const [kategorien, setKategorien] = useState<number[]>(anfang.kategorien)
+  /*
+   * Zählt die Runden. Er dient als key des Konfettis: So läuft der Wurf je Runde
+   * genau einmal, auch wenn zweimal dasselbe Tier gesucht war.
+   */
+  const [runde, setRunde] = useState(0)
   const [modus, setModus] = useState<Modus>('tag')
   const [state, setState] = useState<GameState | null>(null)
   const [baumOffen, setBaumOffen] = useState(false)
@@ -138,6 +144,7 @@ export function App() {
           : auswahl[Math.floor(Math.random() * auswahl.length)]
 
       setState(createGame(index, d.animals[index].node, { zen: m === 'zen', maxGuesses: versuche }))
+      setRunde((n) => n + 1)
     },
     [],
   )
@@ -220,6 +227,11 @@ export function App() {
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-[1500px] flex-col gap-5 p-4 lg:flex-row lg:items-start lg:gap-8 lg:p-8">
+      {/*
+        Der Wurf hängt an der App, nicht an der Ergebniskarte: Die steht im
+        Vollbild ein zweites Mal, und zwei Würfe übereinander wären einer zu viel.
+      */}
+      {state.status === 'gewonnen' && <Konfetti key={runde} />}
       <div className="flex w-full flex-col gap-5 lg:max-w-sm">
         <header className="border-b border-linie pb-4">
           <div className="flex items-start justify-between gap-3">

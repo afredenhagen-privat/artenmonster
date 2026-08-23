@@ -24,6 +24,8 @@ Großgruppen einschränken — nur Vögel, alles außer Insekten, was man mag.
 Deutsch und Englisch umschaltbar. Hell, Dunkel und Systemeinstellung. Vollbild. Baumansicht wahlweise
 verdichtet oder vollständig. Im Baum lässt sich jeder Knoten antippen: Gruppen zeigen ihre
 Erklärung, Tiere ihren Steckbrief. Nach dem Spielende steht die volle Ergebniskarte auch im Vollbild.
+Wer errät, bekommt einen Wurf Papierschnipsel in den Farben des Spiels — außer bei
+`prefers-reduced-motion`.
 Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
 ## Die sieben Entscheidungen, die man kennen muss
