@@ -52,6 +52,7 @@ const STRINGS = {
     hinweisNehmen: 'Hinweis nehmen',
     hinweisNach: 'Hinweis ab {n} Fehlversuchen',
     hinweisAufgedeckt: 'Das gesuchte Tier gehört zu {gruppe}.',
+    hinweisMerkmal: 'Merkmal',
 
     gewonnen: 'Erraten!',
     verloren: 'Aufgebraucht',
@@ -93,7 +94,7 @@ const STRINGS = {
     sprache: 'English',
     ueber: 'Über',
     datenstand: 'Datenstand {datum}',
-    quellen: 'Stammbaum: NCBI Taxonomy. Namen und Bilder: Wikidata, Wikipedia und Wikimedia Commons.',
+    quellen: 'Stammbaum: NCBI Taxonomy. Namen, Texte und Bilder: Wikidata, Wikipedia und Wikimedia Commons.',
   },
 
   en: {
@@ -143,6 +144,7 @@ const STRINGS = {
     hinweisNehmen: 'Take a hint',
     hinweisNach: 'Hint after {n} wrong guesses',
     hinweisAufgedeckt: 'The mystery animal belongs to {gruppe}.',
+    hinweisMerkmal: 'Trait',
 
     gewonnen: 'Solved!',
     verloren: 'Out of guesses',
@@ -184,7 +186,7 @@ const STRINGS = {
     sprache: 'Deutsch',
     ueber: 'About',
     datenstand: 'Data from {datum}',
-    quellen: 'Tree: NCBI Taxonomy. Names and images: Wikidata, Wikipedia and Wikimedia Commons.',
+    quellen: 'Tree: NCBI Taxonomy. Names, texts and images: Wikidata, Wikipedia and Wikimedia Commons.',
   },
 } as const
 

@@ -86,6 +86,15 @@ export interface Blurb {
  */
 export type BlurbData = Record<string, Blurb>
 
+/**
+ * Merkmalshinweise, nach NCBI-Taxon-ID.
+ *
+ * Ein bis drei Saetze aus dem Wikipedia-Anriss, in denen der Name des Tiers
+ * nicht vorkommt. Nicht jedes Tier hat welche: Wo der Anriss aus einem einzigen
+ * Satz besteht, bleibt nichts uebrig, was nicht zugleich die Loesung waere.
+ */
+export type TippData = Record<string, string[]>
+
 export interface MetaData {
   builtAt: string
   counts: { nodes: number; animals: number; tiers: Record<string, number> }

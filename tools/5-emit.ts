@@ -30,7 +30,14 @@ function stempel(datei: string): string {
 }
 
 /** Dateien, die nachgeladen werden und deshalb einen Inhaltsstempel brauchen. */
-const NACHLADBAR = ['blurbs.de.json', 'blurbs.en.json', 'gruppen.de.json', 'gruppen.en.json'] as const
+const NACHLADBAR = [
+  'blurbs.de.json',
+  'blurbs.en.json',
+  'gruppen.de.json',
+  'gruppen.en.json',
+  'tipps.de.json',
+  'tipps.en.json',
+] as const
 
 type Text = { text: string; url: string; lang?: 'de' | 'en' }
 
@@ -174,6 +181,19 @@ async function main(): Promise<void> {
   const blurbsDe = mitRueckfall(blurbsNurDe, blurbsNurEn, 'en')
   const blurbsEn = mitRueckfall(blurbsNurEn, blurbsNurDe, 'de')
 
+  /*
+   * Merkmalshinweise. Hier gibt es keinen Rueckfall auf die andere Sprache:
+   * Ein englischer Satz mitten im deutschen Spiel waere beim Steckbrief nach
+   * dem Raten zu verschmerzen, als Hinweis waehrend der Runde aber ein Bruch.
+   * Wo nichts steht, bleibt es beim Hinweis auf die Gruppe.
+   */
+  const tippsDe: Record<string, string[]> = {}
+  const tippsEn: Record<string, string[]> = {}
+  for (const p of sorted) {
+    if (p.tippsDe?.length) tippsDe[String(p.taxid)] = p.tippsDe
+    if (p.tippsEn?.length) tippsEn[String(p.taxid)] = p.tippsEn
+  }
+
   // --- Zusicherungen -------------------------------------------------------
   const fehler: string[] = []
 
@@ -248,6 +268,8 @@ async function main(): Promise<void> {
     ['blurbs.en.json', blurbsEn],
     ['gruppen.de.json', gruppenDe],
     ['gruppen.en.json', gruppenEn],
+    ['tipps.de.json', tippsDe],
+    ['tipps.en.json', tippsEn],
     ['meta.json', meta],
   ]
 
@@ -268,7 +290,7 @@ async function main(): Promise<void> {
   console.log('  ' + 'Summe'.padEnd(16) + ''.padStart(8) + mb(gesamtGz).padStart(12))
 
   const precacheGz = dateien
-    .filter(([n]) => !n.startsWith('blurbs') && !n.startsWith('gruppen'))
+    .filter(([n]) => !n.startsWith('blurbs') && !n.startsWith('gruppen') && !n.startsWith('tipps'))
     .reduce((sum, [, d]) => sum + gzipSize(d), 0)
   console.log('  davon fest im Precache des Service Workers: ' + mb(precacheGz))
 
@@ -278,6 +300,14 @@ async function main(): Promise<void> {
     console.log('    Stufe ' + t + ' (' + CONFIG.TIERS[t].name.de + '): ' + meta.counts.tiers[t])
   }
   console.log('  Suchbegriffe: ' + entries.length)
+  console.log(
+    '  Merkmalshinweise: ' +
+      Object.keys(tippsDe).length +
+      ' Tiere deutsch, ' +
+      Object.keys(tippsEn).length +
+      ' englisch, von ' +
+      animals.length,
+  )
   console.log('  Verteilung auf die Grossgruppen:')
   kategorien.forEach((k, i) => {
     const n = animals.filter((a) => a.kat === i).length

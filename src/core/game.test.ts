@@ -131,6 +131,42 @@ describe('Hinweise', () => {
     expect(canTakeHint(s, tree)).toBe(false)
   })
 
+  it('gibt erst das Merkmal und dann die Gruppe', () => {
+    /*
+     * Der Merkmalssatz ist der weichere Hinweis: Er laedt zum Weiterraten ein,
+     * waehrend das Aufdecken einer Ebene die Suche zusammenschnurren laesst.
+     */
+    let s = createGame(0, TIERE.loewe)
+    for (let i = 1; i <= 8; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    expect(canTakeHint(s, tree, 2)).toBe(true)
+
+    s = takeHint(s, tree, 2)
+    expect(s.textHints).toEqual([0])
+    expect(s.hints).toEqual([])
+
+    for (let i = 9; i <= 14; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    s = takeHint(s, tree, 2)
+    expect(s.textHints).toEqual([0])
+    expect(s.hints).toHaveLength(1)
+  })
+
+  it('geht ohne Merkmalssatz gleich zur Gruppe', () => {
+    let s = createGame(0, TIERE.loewe)
+    for (let i = 1; i <= 8; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    s = takeHint(s, tree, 0)
+    expect(s.textHints).toEqual([])
+    expect(s.hints).toHaveLength(1)
+  })
+
+  it('zaehlt beide Hinweisarten auf denselben Vorrat', () => {
+    let s = createGame(0, TIERE.loewe)
+    for (let i = 1; i <= 8; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    s = takeHint(s, tree, 5)
+    // Ein Hinweis steht zu, ein zweiter erst nach dem vierzehnten Fehlversuch.
+    expect(canTakeHint(s, tree, 5)).toBe(false)
+    expect(takeHint(s, tree, 5)).toBe(s)
+  })
+
   it('zieht die Hinweisschwellen mit dem Versuchsvorrat mit', () => {
     /*
      * Bei zehn Versuchen waere ein Hinweis erst nach vierzehn Fehlversuchen

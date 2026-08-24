@@ -65,6 +65,14 @@ export interface GameState {
   guesses: GuessResult[]
   /** Knoten, die durch Hinweise aufgedeckt wurden. */
   hints: number[]
+  /**
+   * Aufgedeckte Merkmalshinweise, als Index in die Satzliste des Zieltiers.
+   *
+   * Getrennt von hints, weil die beiden verschiedene Dinge bezeichnen: Der eine
+   * ist ein Knoten im Baum und faerbt ihn ein, der andere ein Satz. Beide
+   * zusammen zehren am selben Vorrat.
+   */
+  textHints: number[]
   maxGuesses: number
   status: GameStatus
   /** Kein Versuchslimit, Baum frei einsehbar. */
@@ -82,6 +90,7 @@ export function createGame(target: number, targetNode: number, options: GameOpti
     targetNode,
     guesses: [],
     hints: [],
+    textHints: [],
     maxGuesses: options.zen ? Infinity : (options.maxGuesses ?? MAX_GUESSES),
     status: 'laeuft',
     zen: options.zen ?? false,
@@ -163,10 +172,22 @@ export function hintsEarned(state: GameState): number {
   return hintThresholds(state.maxGuesses).filter((n) => wrong >= n).length
 }
 
-export function canTakeHint(state: GameState, tree: Tree): boolean {
+/** Wie viele Hinweise sind schon abgerufen, gleich welcher Art? */
+export function hintsTaken(state: GameState): number {
+  return state.hints.length + state.textHints.length
+}
+
+/**
+ * Ist noch ein Hinweis drin?
+ *
+ * `tipps` ist die Zahl der Merkmalssaetze, die zum Zieltier vorliegen. Ohne sie
+ * bleibt nur der Gruppenhinweis, und wenn auch der erschoepft ist, gibt es
+ * nichts mehr zu holen.
+ */
+export function canTakeHint(state: GameState, tree: Tree, tipps = 0): boolean {
   if (state.status !== 'laeuft') return false
-  if (state.hints.length >= hintsEarned(state)) return false
-  return nextHintNode(state, tree) !== null
+  if (hintsTaken(state) >= hintsEarned(state)) return false
+  return state.textHints.length < tipps || nextHintNode(state, tree) !== null
 }
 
 /**
@@ -184,9 +205,28 @@ export function nextHintNode(state: GameState, tree: Tree): number | null {
   return next === state.targetNode ? null : next
 }
 
-export function takeHint(state: GameState, tree: Tree): GameState {
-  if (!canTakeHint(state, tree)) return state
+/**
+ * Nimmt den naechsten Hinweis.
+ *
+ * Der Merkmalssatz kommt zuerst, die Gruppe danach: Er ist der weichere
+ * Hinweis, der zum Weiterraten einlaedt, waehrend das Aufdecken einer Ebene im
+ * Stammbaum die Suche mechanisch zusammenschnurren laesst. Wer keinen
+ * Merkmalssatz hat — rund ein Drittel der Tiere hat keinen, weil ihr
+ * Wikipedia-Anriss aus einem einzigen Satz besteht — bekommt gleich die Gruppe.
+ */
+export function takeHint(state: GameState, tree: Tree, tipps = 0): GameState {
+  if (!canTakeHint(state, tree, tipps)) return state
   const node = nextHintNode(state, tree)
+
+  /*
+   * Genau der erste Hinweis ist ein Merkmal, jeder weitere deckt eine Ebene im
+   * Stammbaum auf. Ist im Baum nichts mehr aufzudecken, springt ein weiterer
+   * Merkmalssatz ein, statt gar nichts zu geben.
+   */
+  const nimmMerkmal = state.textHints.length < tipps && (state.textHints.length === 0 || node === null)
+  if (nimmMerkmal) {
+    return { ...state, textHints: [...state.textHints, state.textHints.length] }
+  }
   if (node === null) return state
   return { ...state, hints: [...state.hints, node] }
 }

@@ -39,7 +39,7 @@ export default defineConfig({
              * Adresse, ein alter Eintrag kann sie nicht beantworten. maxEntries
              * haelt eine Generation vor und raeumt aeltere weg.
              */
-            urlPattern: /\/data\/(blurbs|gruppen)\.[a-z]{2}\.json(\?|$)/,
+            urlPattern: /\/data\/(blurbs|gruppen|tipps)\.[a-z]{2}\.json(\?|$)/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'artenmonster-blurbs',

@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { CONFIG } from './config.ts'
 import { PATHS } from './paths.ts'
 import { fetchCached, isCached, sleep } from './http.ts'
 
@@ -80,7 +79,7 @@ export interface Summary {
 }
 
 /**
- * Einleitungsabsaetze mehrerer Artikel auf einmal.
+ * Einleitungsabsaetze mehrerer Artikel auf einmal, ungekuerzt.
  *
  * Der REST-Endpunkt /page/summary kann nur einen Artikel je Anfrage. Fuer 3000
  * Tiere in zwei Sprachen waeren das 6000 Abrufe, und dabei drosselt Wikipedia so
@@ -142,7 +141,9 @@ export async function fetchExtracts(
       if (page.missing || !page.extract) continue
       const angefragt = zurueck.get(page.title) ?? page.title
       out.set(angefragt, {
-        text: shorten(page.extract, CONFIG.BLURB_MAX_CHARS),
+        // Ungekuerzt: Der Steckbrief kuerzt selbst, die Merkmalshinweise
+        // brauchen mehr Text als in ihn hineinpasst.
+        text: page.extract.replace(/\s+/g, ' ').trim(),
         url: 'https://' + lang + '.wikipedia.org/wiki/' + encodeURIComponent(page.title.replace(/ /g, '_')),
       })
     }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { imageUrl, loadGameData, loadGruppen, textVersion, type GameData } from './data/load.ts'
+import { imageUrl, loadGameData, loadGruppen, loadTipps, textVersion, type GameData } from './data/load.ts'
 import type { Thema } from './data/storage.ts'
 import {
   ladeEinstellungen,
@@ -12,13 +12,14 @@ import {
   applyGuess,
   canTakeHint,
   createGame,
+  hintsEarned,
   takeHint,
   GUESS_OPTIONS,
   type BaumModus,
   type GameState,
 } from './core/game.ts'
 import { dayKey, dailyIndex, puzzleNumber } from './core/daily.ts'
-import type { BlurbData, Lang, TierId } from './core/types.ts'
+import type { BlurbData, Lang, TierId, TippData } from './core/types.ts'
 import { t, tierName } from './i18n/strings.ts'
 import { GuessInput } from './ui/GuessInput.tsx'
 import { GuessList } from './ui/GuessList.tsx'
@@ -82,6 +83,7 @@ export function App() {
   const [baumOffen, setBaumOffen] = useState(false)
   const [vollbild, setVollbild] = useState(false)
   const [gruppen, setGruppen] = useState<BlurbData>({})
+  const [tipps, setTipps] = useState<TippData>({})
 
   useEffect(() => {
     loadGameData().then(setData, () => setFehler(true))
@@ -108,6 +110,27 @@ export function App() {
       marke.setAttribute('content', grund)
     }
   }, [thema])
+
+  /*
+   * Die Merkmalshinweise werden geholt, sobald der erste Hinweis fällig werden
+   * kann — nicht beim Start und nicht erst beim Klick.
+   *
+   * Beim Start wären es 189 KB, die die meisten Runden nie brauchen; beim Klick
+   * stünde der Spieler vor einer ladenden Leiste. Der Zeitpunkt dazwischen liegt
+   * mehrere Fehlversuche vor dem Abruf, da ist Zeit genug. Die Datei gehört
+   * ohnehin nicht ins Precache, das Offline-Paket bleibt bei 513 KB.
+   */
+  const hinweisReif = state !== null && hintsEarned(state) > 0
+  useEffect(() => {
+    if (!data || !hinweisReif) return
+    let abgebrochen = false
+    loadTipps(lang, textVersion(data, 'tipps.' + lang + '.json')).then((t) => {
+      if (!abgebrochen) setTipps(t)
+    })
+    return () => {
+      abgebrochen = true
+    }
+  }, [data, lang, hinweisReif])
 
   // Erklaerungen zu den Gruppen kommen nach, sobald die Spieldaten stehen: Erst
   // mit ihnen ist der Inhaltsstempel bekannt, der die richtige Fassung holt.
@@ -196,7 +219,9 @@ export function App() {
 
   const schonGespielt = modus === 'tag' ? ladeTagesErgebnis(dayKey(), tier) : null
   const fertig = state.status !== 'laeuft'
-  const hinweisMoeglich = canTakeHint(state, data.tree)
+  // Die Merkmalssaetze des gesuchten Tiers, falls es welche gibt.
+  const zielTipps = tipps[String(data.tree.taxidOf(state.targetNode))] ?? []
+  const hinweisMoeglich = canTakeHint(state, data.tree, zielTipps.length)
   // Ohne Limit gibt es nichts abzuzaehlen, egal ob das am Zen-Modus liegt oder
   // an der eingestellten Versuchszahl.
   const ohneLimit = !Number.isFinite(state.maxGuesses)
@@ -421,7 +446,7 @@ export function App() {
                 <button
                   type="button"
                   disabled={!hinweisMoeglich}
-                  onClick={() => setState(takeHint(state, data.tree))}
+                  onClick={() => setState(takeHint(state, data.tree, zielTipps.length))}
                   className="etikett border border-linie px-2 py-1 transition enabled:hover:border-mittel enabled:hover:text-mittel disabled:opacity-30"
                 >
                   {t(lang, 'hinweisNehmen')}
@@ -467,7 +492,7 @@ export function App() {
           </div>
         )}
 
-        <GuessList data={data} state={state} lang={lang} />
+        <GuessList data={data} state={state} lang={lang} tipps={zielTipps} />
 
         <footer className="mt-auto border-t border-linie pt-4 font-etikett text-[10px] leading-relaxed text-flechte/60">
           <p>{t(lang, 'datenstand', { datum: data.meta.builtAt })}</p>

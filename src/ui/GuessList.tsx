@@ -15,6 +15,8 @@ interface Props {
   data: GameData
   state: GameState
   lang: Lang
+  /** Merkmalssätze zum gesuchten Tier, in der Reihenfolge ihrer Aufdeckung. */
+  tipps?: string[]
 }
 
 /** Kalt heißt viele Verzweigungen bis zur Lösung, warm heißt fast dran. */
@@ -25,8 +27,10 @@ function waerme(steps: number): { kante: string; text: string } {
   return { kante: 'border-l-fern', text: 'text-fern' }
 }
 
-export function GuessList({ data, state, lang }: Props) {
-  if (state.guesses.length === 0 && state.hints.length === 0) return null
+export function GuessList({ data, state, lang, tipps = [] }: Props) {
+  if (state.guesses.length === 0 && state.hints.length === 0 && state.textHints.length === 0) {
+    return null
+  }
 
   const besterIndex = state.guesses.reduce(
     (best, g, i) => (g.steps < state.guesses[best].steps ? i : best),
@@ -35,6 +39,25 @@ export function GuessList({ data, state, lang }: Props) {
 
   return (
     <ol className="space-y-px">
+      {/*
+        Merkmalshinweise stehen über den Gruppenhinweisen, weil sie zuerst
+        vergeben werden. Sie sind kursiv gesetzt: Es ist ein Zitat aus dem
+        Artikel, keine Aussage des Spiels.
+      */}
+      {state.textHints.map((index) => {
+        const satz = tipps[index]
+        if (!satz) return null
+        return (
+          <li
+            key={'merkmal' + index}
+            className="animate-aufblenden border-l-2 border-l-mittel bg-mittel/10 px-4 py-2.5"
+          >
+            <p className="etikett text-mittel">{t(lang, 'hinweisMerkmal')}</p>
+            <p className="mt-0.5 font-tafel text-[14px] italic leading-relaxed text-knochen">{satz}</p>
+          </li>
+        )
+      })}
+
       {state.hints.map((node, i) => (
         <li
           key={'hinweis' + i}

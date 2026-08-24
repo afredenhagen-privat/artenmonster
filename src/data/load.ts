@@ -1,6 +1,6 @@
 import { Tree } from '../core/tree.ts'
 import { SearchIndex } from '../core/search.ts'
-import type { BlurbData, Lang, TierId } from '../core/types.ts'
+import type { BlurbData, Lang, TierId, TippData } from '../core/types.ts'
 
 /**
  * Laedt die generierten Spieldaten.
@@ -99,6 +99,7 @@ export function loadGameData(): Promise<GameData> {
 }
 
 const textCache = new Map<string, Promise<BlurbData>>()
+const tippCache = new Map<string, Promise<TippData>>()
 
 /**
  * Laedt eine der beiden Textdateien, mit ihrem Inhaltsstempel in der Adresse.
@@ -130,6 +131,21 @@ export function loadBlurbs(lang: Lang, version?: string): Promise<BlurbData> {
  */
 export function loadGruppen(lang: Lang, version?: string): Promise<BlurbData> {
   return ladeTexte('gruppen.' + lang + '.json', version)
+}
+
+/**
+ * Merkmalshinweise. Werden geholt, sobald der erste Hinweis faellig werden
+ * koennte — nicht erst beim Klick, damit der Hinweis sofort dasteht.
+ */
+export function loadTipps(lang: Lang, version?: string): Promise<TippData> {
+  const datei = 'tipps.' + lang + '.json'
+  const schluessel = datei + '?' + (version ?? '')
+  let p = tippCache.get(schluessel)
+  if (!p) {
+    p = getJson<TippData>(version ? datei + '?v=' + version : datei).catch(() => ({}) as TippData)
+    tippCache.set(schluessel, p)
+  }
+  return p
 }
 
 /** Der Inhaltsstempel einer nachladbaren Datei, falls die Daten ihn kennen. */

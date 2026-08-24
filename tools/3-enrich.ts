@@ -12,7 +12,8 @@ import path from 'node:path'
 import { CONFIG, type TierId } from './config.ts'
 import { PATHS, ensureDirs, readJson, writeJson, readOverride } from './paths.ts'
 import { progress } from './http.ts'
-import { fetchExtracts } from './wikipedia.ts'
+import { fetchExtracts, shorten } from './wikipedia.ts'
+import { merkmalsSaetze } from '../src/core/tipps.ts'
 import { fetchImageInfo, type CommonsInfo } from './commons.ts'
 import { fetchPageviews, schaetzerAusSitelinks } from './pageviews.ts'
 import { loadTree, isDescendantOf, rankOf, type TaxTree } from './ncbi.ts'
@@ -39,6 +40,9 @@ export interface PoolAnimal {
   image?: CommonsInfo
   blurbDe?: { text: string; url: string }
   blurbEn?: { text: string; url: string }
+  /** Merkmalshinweise: Saetze aus dem Anriss, in denen der Name nicht vorkommt. */
+  tippsDe?: string[]
+  tippsEn?: string[]
 }
 
 interface AnimalOverride {
@@ -464,16 +468,46 @@ async function main(): Promise<void> {
     pool.map((p) => p.titleEn ?? '').filter(Boolean),
     progress('Steckbriefe englisch'),
   )
+  /*
+   * Aus demselben Abruf kommen zwei Dinge: der gekuerzte Steckbrief fuer den
+   * Ergebnisschirm und die Merkmalshinweise fuers Raten. Die Hinweise brauchen
+   * mehr Text als in den Steckbrief passt, deshalb liefert fetchExtracts
+   * ungekuerzt und beide Seiten nehmen sich, was sie brauchen.
+   */
+  const namenVon = (p: PoolAnimal) => ({
+    trivial: [p.nameDe, p.nameEn],
+    wissenschaftlich: [p.sci, p.sci.split(' ')[0]],
+  })
+
   for (const p of pool) {
     const d = de.get(p.titleDe)
-    if (d) p.blurbDe = d
+    if (d) {
+      p.blurbDe = { ...d, text: shorten(d.text, CONFIG.BLURB_MAX_CHARS) }
+      p.tippsDe = merkmalsSaetze(d.text, namenVon(p), 'de')
+    }
     const e = p.titleEn ? en.get(p.titleEn) : undefined
-    if (e) p.blurbEn = e
+    if (e) {
+      p.blurbEn = { ...e, text: shorten(e.text, CONFIG.BLURB_MAX_CHARS) }
+      p.tippsEn = merkmalsSaetze(e.text, namenVon(p), 'en')
+    }
   }
 
   const mitDe = pool.filter((p) => p.blurbDe).length
   const mitEn = pool.filter((p) => p.blurbEn).length
   console.log('  Steckbriefe deutsch: ' + mitDe + ', englisch: ' + mitEn)
+  const tippDe = pool.filter((p) => p.tippsDe?.length).length
+  const tippEn = pool.filter((p) => p.tippsEn?.length).length
+  console.log(
+    '  Merkmalshinweise deutsch: ' +
+      tippDe +
+      ' Tiere (' +
+      Math.round((100 * tippDe) / pool.length) +
+      '%), englisch: ' +
+      tippEn +
+      ' (' +
+      Math.round((100 * tippEn) / pool.length) +
+      '%)',
+  )
 
   writeJson(path.join(PATHS.work, 'pool.json'), pool)
   console.log('  Geschrieben: data/work/pool.json')

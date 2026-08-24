@@ -13,10 +13,11 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | Spielbare Tiere | 4.000 (Leicht 500, Mittel 1.400, Schwer 2.100) |
 | Baumknoten | 5.773 |
 | Steckbriefe | je 4.000 deutsch und englisch |
+| Merkmalshinweise | 2.487 Tiere deutsch (62 %), 3.143 englisch (79 %) |
 | Gruppenerklärungen | je 1.599, davon 394 im Deutschen aus der englischen Wikipedia |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 107 |
+| Tests | 121 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Versuche wählbar in Zehnerschritten von 10 bis 50 oder ohne Limit. Das gesuchte Tier lässt sich auf
@@ -28,7 +29,7 @@ Wer errät, bekommt einen Wurf Papierschnipsel in den Farben des Spiels — auß
 `prefers-reduced-motion`.
 Installierbar als PWA, offline spielbar bis auf die Tierfotos.
 
-## Die sieben Entscheidungen, die man kennen muss
+## Die acht Entscheidungen, die man kennen muss
 
 **Bekanntheit wird an Wikipedia-Abrufen gemessen, nicht an Sprachversionen.** Die Zahl der
 Sprachversionen misst, wie gründlich eine Gruppe erfasst ist, nicht wie bekannt ein Tier ist. Bei
@@ -66,6 +67,17 @@ Beide Stellen zählen deshalb gleich, danach entscheidet die Bekanntheit. Dazu w
 angezeigten Namen schwerer als einer im englischen oder wissenschaftlichen, sonst steht bei „Zebra"
 auf Deutsch die Wandermuschel oben (englisch *Zebra mussel*). Siehe `matchRang` in
 `src/core/search.ts`.
+
+**Der erste Hinweis ist ein Merkmal, jeder weitere deckt eine Ebene im Stammbaum auf.** Der
+Merkmalssatz kommt aus dem Wikipedia-Anriss und zeigt auf Aussehen, Färbung, Größe oder Lebensraum,
+ohne das Tier zu nennen — er lädt zum Weiterraten ein, während das Aufdecken einer Ebene die Suche
+mechanisch zusammenschnurren lässt. Die Auswahl der Sätze macht `merkmalsSaetze` in
+`src/core/tipps.ts`: Sätze mit dem Namen fliegen raus, Sätze über den Namen ebenfalls, und Wörter,
+die nur das Grundwort streifen, werden geschwärzt statt den Satz zu verwerfen. Das hebt die Ausbeute
+von rund der Hälfte der Tiere auf 62 Prozent. Bei wissenschaftlichen Namen zählt zusätzlich der
+Wortanfang, weil lateinische Familiennamen aus dem Gattungsstamm gebildet werden (*Balaeniceps* →
+*Balaenicipitidae*); bei Trivialnamen wäre das falsch, dort sperrte der Anfang von „Europäische
+Hornotter" jeden Satz über Europa. Wer keinen Satz hat, bekommt sofort die Gruppe.
 
 **Fehlt ein Text in der gespielten Sprache, springt die andere ein.** Zu vielen Kladen gibt es nur
 einen englischen Wikipedia-Artikel — Whippomorpha, Neoaves, Asterozoa und rund vierhundert weitere.

@@ -18,7 +18,7 @@ import { CONFIG } from './config.ts'
 import { PATHS, ensureDirs, readJson, writeJson, readOverride } from './paths.ts'
 import { loadTree, loadNames, lineage, rankOf, type TaxNames } from './ncbi.ts'
 import { sparql, val } from './sparql.ts'
-import { fetchExtracts, type Summary } from './wikipedia.ts'
+import { fetchExtracts, shorten, type Summary } from './wikipedia.ts'
 import { progress } from './http.ts'
 import type { PoolAnimal } from './3-enrich.ts'
 
@@ -259,10 +259,11 @@ async function main(): Promise<void> {
   for (const knoten of nodes) {
     const info = wikidataNames.get(knoten.taxid)
     if (!info) continue
+    // fetchExtracts liefert ungekuerzt, das Kuerzen gehoert zur Anzeige.
     const d = info.titleDe ? gruppeDe.get(info.titleDe) : undefined
-    if (d) knoten.blurbDe = d
+    if (d) knoten.blurbDe = { ...d, text: shorten(d.text, CONFIG.BLURB_MAX_CHARS) }
     const e = info.titleEn ? gruppeEn.get(info.titleEn) : undefined
-    if (e) knoten.blurbEn = e
+    if (e) knoten.blurbEn = { ...e, text: shorten(e.text, CONFIG.BLURB_MAX_CHARS) }
   }
   console.log(
     '  Gruppen mit Erklaerung: ' +
