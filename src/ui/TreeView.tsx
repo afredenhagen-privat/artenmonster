@@ -42,6 +42,14 @@ interface Props {
   gruppen: BlurbData
   /** Inhaltsstempel der Steckbriefdatei, damit kein alter Cache-Stand kommt. */
   steckbriefVersion?: string
+  /**
+   * Das Foto eines Spieltiers, fertig aufgelöst.
+   *
+   * Als Funktion statt als ganze Datenmenge: Der Baum braucht von den Spieldaten
+   * sonst nichts, und nur die Tiere haben ein Bild — zu einer Klade gibt es
+   * keines, und ein beliebiges Foto aus der Gruppe wäre geraten.
+   */
+  bildVon?: (animal: number) => TierBild | null
 }
 
 /*
@@ -115,7 +123,24 @@ function waerme(steps: number): Ton {
   return SKALA[Math.max(1, Math.min(steps, 3))] ?? KALT
 }
 
-export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, steckbriefVersion }: Props) {
+export interface TierBild {
+  url: string
+  autor: string
+  lizenz: string
+  /** Beschreibungsseite auf Commons, für die Urheberangabe. */
+  seite: string
+}
+
+export function TreeView({
+  tree,
+  state,
+  lang,
+  modus,
+  animalOfNode,
+  gruppen,
+  steckbriefVersion,
+  bildVon,
+}: Props) {
   const zoom = useRef<ReactZoomPanPinchRef | null>(null)
   const rahmen = useRef<HTMLDivElement | null>(null)
   const [gewaehlt, setGewaehlt] = useState<number | null>(null)
@@ -128,6 +153,7 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, stec
    */
   const [steckbriefe, setSteckbriefe] = useState<BlurbData | null>(null)
   const [willSteckbriefe, setWillSteckbriefe] = useState(false)
+  const [bildKaputt, setBildKaputt] = useState(false)
 
   useEffect(() => {
     if (!willSteckbriefe) return
@@ -183,6 +209,9 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, stec
 
   useEffect(() => setGewaehlt(null), [state.targetNode])
 
+  // Ein neues Tier verdient einen neuen Versuch, das Bild zu laden.
+  useEffect(() => setBildKaputt(false), [gewaehlt])
+
   // Nach einem neuen Tipp zurueck auf die eingepasste Ansicht, damit das eben
   // hinzugekommene Tier sicher im Bild ist.
   useEffect(() => {
@@ -208,6 +237,8 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, stec
       : gewaehltIstTier
         ? steckbriefe?.[String(tree.taxidOf(gewaehlt))]
         : gruppen[String(tree.taxidOf(gewaehlt))]
+
+  const bild = gewaehltIstTier && gewaehlt !== null && bildVon ? bildVon(animalOfNode.get(gewaehlt)!) : null
 
   return (
     <div ref={rahmen} className="relative h-full w-full overflow-hidden">
@@ -310,24 +341,53 @@ export function TreeView({ tree, state, lang, modus, animalOfNode, gruppen, stec
               ×
             </button>
           </div>
-          {erklaerung ? (
-            <>
-              <p className="mt-2 max-h-28 overflow-y-auto font-tafel text-[13px] leading-relaxed text-knochen/85">
-                {erklaerung.text}
-              </p>
-              <p className="mt-2 font-etikett text-[10px] text-flechte/70">
-                <a href={erklaerung.url} target="_blank" rel="noreferrer" className="hover:text-knochen">
-                  {t(lang, 'mehrErfahren')}
-                </a>
-                {' · '}
-                {t(lang, erklaerung.lang && erklaerung.lang !== lang ? 'steckbriefQuelleFremd' : 'steckbriefQuelle')}
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 font-tafel text-[13px] italic leading-relaxed text-flechte">
-              {steckbriefe === null ? t(lang, 'steckbriefLaedt') : t(lang, 'keinSteckbrief')}
-            </p>
-          )}
+          {/*
+            Das Foto steht neben dem Text, nicht darüber: Die Leiste sitzt am
+            unteren Rand des Baums und soll ihm nicht die Höhe nehmen. Der
+            Urheber gehört dazu, das verlangen fast alle Commons-Lizenzen.
+          */}
+          <div className="mt-2 flex items-start gap-3">
+            {bild && !bildKaputt && (
+              <figure className="w-24 shrink-0 sm:w-28">
+                <img
+                  src={bild.url}
+                  alt={tree.nameOf(gewaehlt, lang)}
+                  // Bewusst nicht lazy: Das Bild wird erst geholt, wenn jemand
+                  // ein Tier antippt, und ist dann sofort im Bild. Verzoegertes
+                  // Laden brachte hier nichts ausser einer sichtbaren Luecke.
+                  decoding="async"
+                  onError={() => setBildKaputt(true)}
+                  className="h-20 w-full border border-linie bg-tinte object-cover sm:h-24"
+                />
+                <figcaption className="mt-1 font-etikett text-[9px] leading-tight text-flechte/70">
+                  <a href={bild.seite} target="_blank" rel="noreferrer" className="hover:text-knochen">
+                    {t(lang, 'bildVon', { autor: bild.autor, lizenz: bild.lizenz })}
+                  </a>
+                </figcaption>
+              </figure>
+            )}
+
+            <div className="min-w-0 flex-1">
+              {erklaerung ? (
+                <>
+                  <p className="max-h-28 overflow-y-auto font-tafel text-[13px] leading-relaxed text-knochen/85">
+                    {erklaerung.text}
+                  </p>
+                  <p className="mt-2 font-etikett text-[10px] text-flechte/70">
+                    <a href={erklaerung.url} target="_blank" rel="noreferrer" className="hover:text-knochen">
+                      {t(lang, 'mehrErfahren')}
+                    </a>
+                    {' · '}
+                    {t(lang, erklaerung.lang && erklaerung.lang !== lang ? 'steckbriefQuelleFremd' : 'steckbriefQuelle')}
+                  </p>
+                </>
+              ) : (
+                <p className="font-tafel text-[13px] italic leading-relaxed text-flechte">
+                  {steckbriefe === null ? t(lang, 'steckbriefLaedt') : t(lang, 'keinSteckbrief')}
+                </p>
+              )}
+            </div>
+          </div>
         </aside>
       )}
     </div>

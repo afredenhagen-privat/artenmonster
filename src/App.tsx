@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadGameData, loadGruppen, textVersion, type GameData } from './data/load.ts'
+import { imageUrl, loadGameData, loadGruppen, textVersion, type GameData } from './data/load.ts'
 import type { Thema } from './data/storage.ts'
 import {
   ladeEinstellungen,
@@ -22,7 +22,7 @@ import type { BlurbData, Lang, TierId } from './core/types.ts'
 import { t, tierName } from './i18n/strings.ts'
 import { GuessInput } from './ui/GuessInput.tsx'
 import { GuessList } from './ui/GuessList.tsx'
-import { TreeView } from './ui/TreeView.tsx'
+import { TreeView, type TierBild } from './ui/TreeView.tsx'
 import { ResultCard } from './ui/ResultCard.tsx'
 import { Vollbild } from './ui/Vollbild.tsx'
 import { Konfetti } from './ui/Konfetti.tsx'
@@ -213,6 +213,22 @@ export function App() {
     />
   )
 
+  /*
+   * Das Foto eines Tiers für die Leiste unter dem Baum. Nur Tiere haben eines:
+   * Zu einer Klade gibt es kein Bild, und ein beliebiges Foto aus der Gruppe
+   * wäre geraten statt belegt.
+   */
+  const bildVon = (animal: number): TierBild | null => {
+    const eintrag = data.animals[animal]
+    if (!eintrag?.image) return null
+    return {
+      url: imageUrl(data, eintrag.image),
+      autor: eintrag.image.author,
+      lizenz: eintrag.image.license,
+      seite: eintrag.image.page,
+    }
+  }
+
   const baum = (
     <TreeView
       tree={data.tree}
@@ -222,6 +238,7 @@ export function App() {
       animalOfNode={data.animalOfNode}
       gruppen={gruppen}
       steckbriefVersion={textVersion(data, 'blurbs.' + lang + '.json')}
+      bildVon={bildVon}
     />
   )
 
