@@ -51,6 +51,7 @@ const STRINGS = {
     hinweis: 'Hinweis',
     hinweisNehmen: 'Hinweis nehmen',
     hinweisNach: 'Hinweis ab {n} Fehlversuchen',
+    hinweisGesperrt: 'Hinweis ab {n}',
     hinweisAufgedeckt: 'Das gesuchte Tier gehört zu {gruppe}.',
     hinweisMerkmal: 'Merkmal',
 
@@ -143,6 +144,7 @@ const STRINGS = {
     hinweis: 'Hint',
     hinweisNehmen: 'Take a hint',
     hinweisNach: 'Hint after {n} wrong guesses',
+    hinweisGesperrt: 'Hint after {n}',
     hinweisAufgedeckt: 'The mystery animal belongs to {gruppe}.',
     hinweisMerkmal: 'Trait',
 

@@ -13,6 +13,7 @@ import {
   canTakeHint,
   createGame,
   hintsEarned,
+  nextHintAt,
   takeHint,
   GUESS_OPTIONS,
   type BaumModus,
@@ -222,6 +223,15 @@ export function App() {
   // Die Merkmalssaetze des gesuchten Tiers, falls es welche gibt.
   const zielTipps = tipps[String(data.tree.taxidOf(state.targetNode))] ?? []
   const hinweisMoeglich = canTakeHint(state, data.tree, zielTipps.length)
+
+  /*
+   * Ein ausgegrauter Knopf ohne Begruendung sieht aus wie ein Fehler. Solange
+   * der naechste Hinweis nur noch nicht faellig ist, steht die Schwelle darauf;
+   * ist der Vorrat aufgebraucht, bleibt es beim gewohnten Text.
+   */
+  const fehlversuche = state.guesses.filter((g) => !g.correct).length
+  const hinweisSchwelle = nextHintAt(state)
+  const hinweisWartet = !hinweisMoeglich && hinweisSchwelle > fehlversuche
   // Ohne Limit gibt es nichts abzuzaehlen, egal ob das am Zen-Modus liegt oder
   // an der eingestellten Versuchszahl.
   const ohneLimit = !Number.isFinite(state.maxGuesses)
@@ -447,9 +457,12 @@ export function App() {
                   type="button"
                   disabled={!hinweisMoeglich}
                   onClick={() => setState(takeHint(state, data.tree, zielTipps.length))}
+                  title={hinweisWartet ? t(lang, 'hinweisNach', { n: hinweisSchwelle }) : undefined}
                   className="etikett border border-linie px-2 py-1 transition enabled:hover:border-mittel enabled:hover:text-mittel disabled:opacity-30"
                 >
-                  {t(lang, 'hinweisNehmen')}
+                  {hinweisWartet
+                    ? t(lang, 'hinweisGesperrt', { n: hinweisSchwelle })
+                    : t(lang, 'hinweisNehmen')}
                 </button>
               </div>
             </div>

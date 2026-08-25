@@ -17,7 +17,7 @@ offen ist, und welche Entscheidungen man kennen muss, um nichts kaputtzumachen.
 | Gruppenerklärungen | je 1.599, davon 394 im Deutschen aus der englischen Wikipedia |
 | Bilder | 4.000, alle mit Urheber- und Lizenzangabe |
 | Offline-Paket | 506 KB gepackt |
-| Tests | 121 |
+| Tests | 123 |
 
 Modi: Tagesrätsel (ohne Server, das Datum ist der Seed), Endlos, Zen. Drei Schwierigkeitsstufen.
 Versuche wählbar in Zehnerschritten von 10 bis 50 oder ohne Limit. Das gesuchte Tier lässt sich auf

@@ -20,20 +20,40 @@ export const GUESS_OPTIONS = [10, 20, 30, 40, 50, Infinity] as const
  * Nach wie vielen Fehlversuchen ein Hinweis faellig wird, als Anteil am
  * Versuchsvorrat.
  *
- * Frueher standen dort die festen Zahlen 8 und 14, die zu den zwanzig Versuchen
- * passten, die es als einzige Einstellung gab. Bei zehn Versuchen waere der
- * zweite Hinweis unerreichbar gewesen und der erste haette drei Versuche uebrig
- * gelassen. Als Anteil ergeben zwanzig Versuche weiterhin genau 8 und 14.
+ * Bei zehn Versuchen waere ein Hinweis nach vierzehn Fehlversuchen nie
+ * gekommen, deshalb ueberhaupt der Anteil.
  */
 const HINT_ANTEILE = [0.4, 0.7] as const
 
-/** Nach so vielen Fehlversuchen darf ein Hinweis abgerufen werden. */
+/**
+ * Spaeter als das wird ein Hinweis nie faellig.
+ *
+ * Der Anteil allein zog in die andere Richtung falsch: Bei fuenfzig Versuchen
+ * kam der erste Hinweis erst nach zwanzig Fehlversuchen, und wer eine Runde in
+ * zehn Tipps loest, sah ihn nie. Wer sich mehr Versuche gibt, will Luft haben —
+ * nicht die Hilfe nach hinten geschoben bekommen. Der Anteil darf die Schwelle
+ * also nur senken, nie heben.
+ */
 export const HINT_AFTER = [8, 14] as const
 
 /** Die Schwellen fuer einen konkreten Vorrat. Ohne Limit bleibt es bei 8 und 14. */
 export function hintThresholds(maxGuesses: number): number[] {
   if (!Number.isFinite(maxGuesses)) return [...HINT_AFTER]
-  return HINT_ANTEILE.map((anteil) => Math.max(1, Math.round(maxGuesses * anteil)))
+  return HINT_ANTEILE.map((anteil, i) =>
+    Math.min(HINT_AFTER[i], Math.max(1, Math.round(maxGuesses * anteil))),
+  )
+}
+
+/**
+ * Ab wie vielen Fehlversuchen der naechste Hinweis bereitsteht.
+ *
+ * Null heisst: schon jetzt, oder gar nicht mehr. Die Oberflaeche schreibt die
+ * Zahl an den gesperrten Knopf, damit niemand raten muss, warum er ausgegraut
+ * ist.
+ */
+export function nextHintAt(state: GameState): number {
+  if (state.zen) return 0
+  return hintThresholds(state.maxGuesses)[state.hints.length] ?? 0
 }
 
 export type GameStatus = 'laeuft' | 'gewonnen' | 'verloren'

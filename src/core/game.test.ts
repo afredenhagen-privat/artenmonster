@@ -10,6 +10,7 @@ import {
   knownNode,
   hintsEarned,
   hintThresholds,
+  nextHintAt,
   canTakeHint,
   nextHintNode,
   takeHint,
@@ -175,7 +176,6 @@ describe('Hinweise', () => {
      */
     expect(hintThresholds(20)).toEqual([8, 14])
     expect(hintThresholds(10)).toEqual([4, 7])
-    expect(hintThresholds(50)).toEqual([20, 35])
     expect(hintThresholds(Infinity)).toEqual([8, 14])
 
     let s = createGame(0, TIERE.loewe, { maxGuesses: 10 })
@@ -183,6 +183,34 @@ describe('Hinweise', () => {
     expect(hintsEarned(s)).toBe(0)
     s = applyGuess(s, tree, 4, TIERE.ameise)
     expect(hintsEarned(s)).toBe(1)
+  })
+
+  it('schiebt den Hinweis bei grossem Vorrat nicht nach hinten', () => {
+    /*
+     * Der Anteil darf die Schwelle nur senken. Bei fuenfzig Versuchen kaeme der
+     * erste Hinweis sonst erst nach zwanzig Fehlversuchen — wer eine Runde in
+     * zehn Tipps loest, saehe ihn nie.
+     */
+    for (const vorrat of [20, 30, 40, 50, 100]) {
+      expect(hintThresholds(vorrat), 'Vorrat ' + vorrat).toEqual([8, 14])
+    }
+
+    let s = createGame(0, TIERE.loewe, { maxGuesses: 50 })
+    for (let i = 1; i <= 7; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    expect(hintsEarned(s)).toBe(0)
+    expect(nextHintAt(s)).toBe(8)
+    s = applyGuess(s, tree, 8, TIERE.ameise)
+    expect(hintsEarned(s)).toBe(1)
+  })
+
+  it('nennt die naechste Schwelle, damit der gesperrte Knopf sich erklaert', () => {
+    let s = createGame(0, TIERE.loewe, { maxGuesses: 10 })
+    expect(nextHintAt(s)).toBe(4)
+    for (let i = 1; i <= 4; i++) s = applyGuess(s, tree, i, TIERE.ameise)
+    s = takeHint(s, tree)
+    // Nach dem ersten Hinweis zeigt die Zahl auf den zweiten.
+    expect(nextHintAt(s)).toBe(7)
+    expect(nextHintAt(createGame(0, TIERE.loewe, { zen: true }))).toBe(0)
   })
 
   it('deckt genau eine Ebene unterhalb des Bekannten auf', () => {
